@@ -1,0 +1,248 @@
+<?php
+
+/**
+ * @file
+ * A block module that displays recent blog and forum posts.
+ */
+
+/**
+ * Implements hook_help().
+ *
+ * Displays help and module information.
+ *
+ * @param path 
+ *   Which path of the site we're using to display help
+ * @param arg 
+ *   Array that holds the current path as returned from arg() function
+ */
+function current_posts_help($path, $arg){
+  switch ($path) {
+    case "admin/help#current_posts":
+      return t("Displays links to nodes created on this date"); 
+      break; 
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function current_posts_menu() {
+  $items = array();
+
+  $items['admin/config/content/current_posts'] = array(
+    'title' => 'Current posts',
+    'description' => 'Configuration for Current posts module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('current_posts_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  
+  $items['current_posts'] = array(
+    'title' => 'Current posts page',
+    'page callback' => 'current_posts_page',
+    'access arguments' => array('access content'),
+  );
+  
+  $items['current_posts/form'] = array(
+    'title' => 'Current posts form',
+    'description' => 'A form to mess around with.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('current_posts_page_form'),
+    'access arguments' => array('access content'),
+    'access callback' => TRUE
+  );
+  
+  $items['results/%'] = array(
+      'title' => 'Form Result',
+      'page callback' => 'current_posts_results_page',
+      'page arguments' => array(1),
+      'access callback' => true,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function current_posts_permission() {
+  return array(
+    'access current_posts content' => array(
+      'title' => t('Access content for the Current posts module'),
+    )
+  );
+}
+
+/**
+ * Custom content function. 
+ * 
+ * Set beginning and end dates, retrieve posts from database
+ * saved in that time period.
+ * 
+ * @return 
+ *   A result set of the targeted posts.
+ */
+function current_posts_contents(){
+  //Get today's date.
+  $today = getdate();
+  //Calculate the date a week ago.
+  $start_time = mktime(0, 0, 0,$today['mon'],($today['mday'] - 7), $today['year']);
+  //Get all posts from one week ago to the present.
+  $end_time = time();
+  
+  $max_num = variable_get('current_posts_max', 3);
+
+//Use Database API to retrieve current posts.
+  $query = db_select('node', 'n')
+    ->fields('n', array('nid', 'title', 'created'))
+    ->condition('status', 1) //Published.
+    ->condition('created', array($start_time, $end_time), 'BETWEEN')
+    ->orderBy('created', 'DESC') //Most recent first.
+    ->range(0, $max_num)
+    ->execute(); 
+  return $query;  
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function current_posts_block_info() {
+  $blocks['current_posts'] = array(
+    // The name that will appear in the block list.
+    'info' => t('Current posts'),
+    // Default setting.
+    'cache' => DRUPAL_CACHE_PER_ROLE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ * 
+ * Prepares the contents of the block.
+ */
+function current_posts_block_view($delta = '') {
+  switch ($delta) {
+    case 'current_posts':
+      $block['subject'] = t('Current posts');
+      if (user_access('access content')) {
+        // Use our custom function to retrieve data.
+        $result = current_posts_contents();
+        // Array to contain items for the block to render.
+        $items = array();
+        // Iterate over the resultset and format as links.
+        foreach ($result as $node) {
+          $items[] = array(
+            'data' => l($node->title, 'node/' . $node->nid),
+          ); 
+        }
+       // No content in the last week.
+        if (empty($items)) {
+          $block['content'] = t('No posts available.');  
+        } 
+        else {
+          // Pass data through theme function.
+          $block['content'] = theme('item_list', array(
+            'items' => $items));
+        }
+      }
+    return $block;
+  }
+  
+}
+
+/**
+ * Page callback: Current posts settings
+ *
+ * @see current_posts_menu()
+ */
+function current_posts_form($form, &$form_state) {
+  $form['current_posts_max'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum number of posts'),
+    '#default_value' => variable_get('current_posts_max', 3),
+    '#size' => 2,
+    '#maxlength' => 2,
+    '#description' => t('The maximum number of links to display in the block.'),
+    '#required' => true,
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Implements validation from the Form API.
+ * 
+ * @param $form
+ *   A structured array containing the elements and properties of the form.
+ * @param $form_state
+ *   An array that stores information about the form's current state 
+ *   during processing.
+ */
+function current_posts_form_validate($form, &$form_state){
+  $max_num = $form_state['values']['current_posts_max'];
+  if (!is_numeric($max_num)){
+    form_set_error('current_posts_max', t('You must enter a number for the maximum number of posts to display.'));
+  }
+  elseif ($max_num <= 0){
+    form_set_error('current_posts_max', t('Maximum number of posts to display must be positive.'));
+  }
+}
+
+/**
+ * Page callback for /current_posts.
+ */
+function current_posts_page() {
+  return t('Page Content');
+}
+
+/**
+ * Page callback for /current_posts/form.
+ */
+function current_posts_page_form($form, &$form_state){
+    if (empty($form_state['values']['current_posts_num'])){
+        $form['current_posts_num'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Maximum number of posts'),
+            '#placeholder' => t('Enter number of posts'),
+            '#description' => t('The maximum number of links to display in the block.'),
+            '#required' => true,
+        );
+    
+        $form['submit_button'] = array(
+            '#type' => 'submit',
+            '#value' => t('Click Here!'),
+        );
+    } else {
+        $posts_num = $form_state['values']['current_posts_num'];
+        $form['submission'] = array(
+            '#markup' => 'Number of post(s) to show: ' . $posts_num,
+        );
+    }
+  
+  return $form;
+}
+
+function current_posts_page_form_validate($form, &$form_state){
+    $in = $form_state['values']['current_posts_num'];
+    if (!is_numeric($in)){
+        form_set_error('current_posts_num', t('Amount of posts to show must be number.'));
+    } elseif ($in >= 100) {
+        form_set_error('current_posts_num', t('Too much posts.'));
+    } elseif ($in <=0) {
+        form_set_error('current_posts_num', t('Number of posts must be positive.'));
+    }
+}
+
+function current_posts_page_form_submit($form, &$form_state){
+//    $form_state['rebuild'] = TRUE;
+    $form_state['redirect'] = 'results/' . $form_state['values']['current_posts_num'];
+}
+
+function current_posts_results_page($var1) {
+    for ($i = 0; $i < $var1; $i++) {
+        echo $i;
+    }
+    return t('This is var1 value: ' . $var1);
+}

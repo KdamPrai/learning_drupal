@@ -216,8 +216,12 @@ function current_posts_page_form($form, &$form_state){
         );
     } else {
         $posts_num = $form_state['values']['current_posts_num'];
+        $temp = '';
+        for ($i = 0; $i < $posts_num; $i++) {
+            $temp = $temp . 'Post index: ' . $i . '<br>';
+        }
         $form['submission'] = array(
-            '#markup' => 'Number of post(s) to show: ' . $posts_num,
+            '#markup' => $temp . t('You set max number of posts is: ' . $posts_num),
         );
     }
   
@@ -236,8 +240,8 @@ function current_posts_page_form_validate($form, &$form_state){
 }
 
 function current_posts_page_form_submit($form, &$form_state){
-//    $form_state['rebuild'] = TRUE;
-    $form_state['redirect'] = 'results/' . $form_state['values']['current_posts_num'];
+    $form_state['rebuild'] = TRUE;
+//    $form_state['redirect'] = 'results/' . $form_state['values']['current_posts_num'];
 }
 
 function current_posts_results_page($var1) {

@@ -610,7 +610,7 @@ function current_posts_dept_form($form, &$form_state){
     $form['dept_code'] = array(
         '#type' => 'textfield',
         '#title' => 'Department Code',
-        '#maxlength' => 3,
+        '#maxlength' => 4,
         '#required' => true,
     );
     

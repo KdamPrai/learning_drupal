@@ -552,6 +552,17 @@ function current_posts_reg_form_submit($form, &$form_state){
 //}
 
 function current_posts_applicant_info_page() {
+    if (!isset($_SESSION)) {
+        $dis = array(
+        '#markup' => 'Please login.',
+    );
+    } elseif (empty($_SESSION['form_values'])) {
+        header('Location: ../reg_form');
+        $dis = array(
+        '#markup' => '',
+    );
+    } else {
+        debug($_SESSION['form_values']);
     $name = $_SESSION['form_values']['reg_form']['reg_name'] . ' ' . $_SESSION['form_values']['reg_form']['reg_family_name'];;
     $gender = $_SESSION['form_values']['reg_form']['gender'];
     $dob = $_SESSION['form_values']['reg_form']['dob']['month'] 
@@ -577,6 +588,6 @@ function current_posts_applicant_info_page() {
     $dis = array(
         '#markup' => $info,
     );
-    
+    }
     return $dis;
 }

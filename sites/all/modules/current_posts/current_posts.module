@@ -75,6 +75,14 @@ function current_posts_menu() {
     'page arguments' => array(1),
     'access callback' => true,
   );
+  
+  $items['dept_form'] = array(
+      'title' => 'Add new department',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('current_posts_dept_form'),
+      'access arguments' => array('access content'),
+      
+  );
 
   return $items;
 }
@@ -320,6 +328,18 @@ function current_posts_reg_form($form, &$form_state){
 //    if (empty($_POST)) {
 //        
 //    
+    $pref1 = array();
+//    $tmp = '';
+    $query = db_query("SELECT `nid`, `name`, `code` FROM `major`");
+    $records = $query->fetchAll();
+    foreach ($records as $record) {
+//        foreach ($pref1 as &$value){
+//            $value = $record->name;
+//        }
+//        $tmp = $tmp . $record->name . ' (' . $record->code . ') <br>';
+        $pref1[$record->nid] = $record->name . ' (' . $record->code . ')';
+    }
+//    debug($pref1);
     $form['sect_1'] = array(
         '#type' => 'fieldset', 
         '#title' => t('Section 1 - Applicant\'s Personal Details'),
@@ -400,20 +420,7 @@ function current_posts_reg_form($form, &$form_state){
     $form['sect_2']['preference_1'] = array(
         '#type' => 'select',
         '#title' => 'First Preference',
-        '#options' => array(
-            'AE' => 'Department of Architectural Engineering (AE)',
-            'ARC' => 'Department of Architecture (ARC)',
-            'BAF' => 'Department of Banking and Finance (BAF)',
-            'BUS' => 'Department of Business Administration (BUS)',
-            'CE' => 'Department of Civil Engineering (CE)',
-            'CM' => 'Department of Construction Management (CM)',
-            'CS' => 'Department of Computer Science (CS)',
-            'IE' => 'Department of Industrial Engineering (IE)',
-            'IEFL' => 'Department of English and Foreign Languages (IEFL)',
-            'IR' => 'Department of Political Science and International Relations (IR)',
-            'ITL' => 'Department of International Trade and Logistics (ITL)',
-            'MIS' => 'Department of Management of Information Systems (MIS)',
-        ),
+        '#options' => $pref1,
         '#required' => true,
     );
     
@@ -562,7 +569,7 @@ function current_posts_applicant_info_page() {
         '#markup' => '',
     );
     } else {
-        debug($_SESSION['form_values']);
+//        debug($_SESSION['form_values']);
     $name = $_SESSION['form_values']['reg_form']['reg_name'] . ' ' . $_SESSION['form_values']['reg_form']['reg_family_name'];;
     $gender = $_SESSION['form_values']['reg_form']['gender'];
     $dob = $_SESSION['form_values']['reg_form']['dob']['month'] 
@@ -590,4 +597,42 @@ function current_posts_applicant_info_page() {
     );
     }
     return $dis;
+}
+
+function current_posts_dept_form($form, &$form_state){
+    $form['dept_name'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Department Name',
+        '#maxlength' => 64,
+        '#required' => true,
+    );
+    
+    $form['dept_code'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Department Code',
+        '#maxlength' => 3,
+        '#required' => true,
+    );
+    
+    $form['dept_submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit'),
+    );
+    
+    return $form;
+}
+
+function current_posts_dept_form_validate($form, &$form_state){
+    
+}
+
+function current_posts_dept_form_submit($form, &$form_state){
+    $d_name = $form_state['values']['dept_name'];
+    $d_code = strtoupper($form_state['values']['dept_code']);
+    
+    $query = db_query('INSERT INTO `major`(`name`, `code`) VALUES (\'' . $d_name . '\',\'' . $d_code . '\')');
+    
+    drupal_set_message('Department added');
+    
+//    debug($d_name);
 }

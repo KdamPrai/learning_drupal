@@ -1,0 +1,205 @@
+<?php
+  function current_posts_schema() {
+    $schema['user_info'] = array(
+      'description' => 'The table to store user info.',
+      'fields' => array(
+        'nid' => array(
+          'description' => 'The primary identifier for a node.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE),
+        'family_name' => array(
+          'description' => 'Family name of user.',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+          'default' => ''),
+        'name' => array(
+          'description' => 'Name of user.',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+          'default' => ''),
+        'gender' => array(
+          'description' => 'Gender of user.',
+          'type' => 'int',
+          'length' => 1,
+          'not null' => TRUE,
+          'default' => 0),
+        'dob' => array(
+          'description' => 'Date of birth of user.',
+          'type' => 'int',
+          'length' => 11,
+          'not null' => TRUE,
+          'default' => 0),
+        'pob' => array(
+          'description' => 'Place of birth of user.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+          'default' => ''),
+        'address' => array(
+          'description' => 'Address of user.',
+          'type' => 'varchar',
+          'length' => 64,
+          'not null' => FALSE),
+        'phone' => array(
+          'description' => 'Phone of user.',
+          'type' => 'varchar',
+          'length' => 10,
+          'not null' => FALSE),
+        'acad_year' => array(
+          'description' => 'Academic year.',
+          'type' => 'varchar',
+          'length' => 10,
+          'not null' => TRUE,
+          'default' => ''),
+        'semester' => array(
+          'description' => 'Semester that user register to.',
+          'type' => 'int',
+          'length' => 2,
+          'not null' => TRUE,
+          'default' => 1),
+        'major_id' => array(
+          'description' => 'ID of department that user chose.',
+          'type' => 'int',
+          'length' => 2,
+          'not null' => TRUE,
+          'default' => 0),
+        ),
+      'indexes' => array(
+        'node_changed'        => array('changed'),
+        'node_created'        => array('created'),
+        ),
+      'primary key' => array('nid'),
+      );
+
+    $schema['major'] = array(
+      'description' => 'The department table for nodes.',
+      'fields' => array(
+        'nid' => array(
+          'description' => 'The primary identifier for a node.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE),
+        'name' => array(
+          'description' => 'The name of department.',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+          'default' => ''),
+        'code' => array(
+          'description' => 'The department code which is always capitalized.',
+          'type' => 'varchar',
+          'length' => 4,
+          'not null' => TRUE,
+          'default' => ''),
+        ),
+      'indexes' => array(
+        'node_changed'        => array('changed'),
+        'node_created'        => array('created'),
+        ),
+      'primary key' => array('nid'),
+      );
+
+  return $schema;
+}
+
+function current_posts_update_7101() {
+  $u_info = array(
+      'description' => 'The table to store user info.',
+      'fields' => array(
+        'nid' => array(
+          'description' => 'The primary identifier for a node.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE),
+        'family_name' => array(
+          'description' => 'Family name of user.',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+          'default' => ''),
+        'name' => array(
+          'description' => 'Name of user.',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+          'default' => ''),
+        'gender' => array(
+          'description' => 'Gender of user.',
+          'type' => 'int',
+          'length' => 1,
+          'not null' => TRUE,
+          'default' => 0),
+        'dob' => array(
+          'description' => 'Date of birth of user.',
+          'type' => 'int',
+          'length' => 11,
+          'not null' => TRUE,
+          'default' => 0),
+        'pob' => array(
+          'description' => 'Place of birth of user.',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+          'default' => ''),
+        'address' => array(
+          'description' => 'Address of user.',
+          'type' => 'varchar',
+          'length' => 64,
+          'not null' => FALSE),
+        'phone' => array(
+          'description' => 'Phone of user.',
+          'type' => 'varchar',
+          'length' => 10,
+          'not null' => FALSE),
+        'acad_year' => array(
+          'description' => 'Academic year.',
+          'type' => 'varchar',
+          'length' => 10,
+          'not null' => TRUE,
+          'default' => ''),
+        'semester' => array(
+          'description' => 'Semester that user register to.',
+          'type' => 'int',
+          'length' => 2,
+          'not null' => TRUE,
+          'default' => 1),
+        'major_id' => array(
+          'description' => 'ID of department that user chose.',
+          'type' => 'int',
+          'length' => 2,
+          'not null' => TRUE,
+          'default' => 0),
+        ),
+      'primary key' => array('nid'),
+      );
+
+  $dept = array(
+      'description' => 'The department table for nodes.',
+      'fields' => array(
+        'nid' => array(
+          'description' => 'The primary identifier for a node.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE),
+        'name' => array(
+          'description' => 'The name of department.',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+          'default' => ''),
+        'code' => array(
+          'description' => 'The department code which is always capitalized.',
+          'type' => 'varchar',
+          'length' => 4,
+          'not null' => TRUE,
+          'default' => ''),
+        ),
+      'primary key' => array('nid'),
+      );
+
+    db_create_table('major', $dept);
+    db_create_table('user_info', $u_info);
+}

@@ -80,7 +80,7 @@ function current_posts_menu() {
       'title' => 'Add new department',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('current_posts_dept_form'),
-      'access arguments' => array('access content'),
+      'access arguments' => array('administer'),
       
   );
 
@@ -340,6 +340,12 @@ function current_posts_reg_form($form, &$form_state){
         $pref1[$record->nid] = $record->name . ' (' . $record->code . ')';
     }
 //    debug($pref1);
+    
+    $form['major'] = array(
+        '#type' => 'value',
+        '#value' => $pref1,
+    );
+    
     $form['sect_1'] = array(
         '#type' => 'fieldset', 
         '#title' => t('Section 1 - Applicant\'s Personal Details'),
@@ -363,8 +369,8 @@ function current_posts_reg_form($form, &$form_state){
        '#type' => 'select',
        '#title' => t('Gender'),
        '#options' => array(
-           'Female' => t('Female'),
-           'Male' => t('Male'),
+           0 => t('Female'),
+           1 => t('Male'),
        ),
        '#required' => true,
     );
@@ -390,6 +396,7 @@ function current_posts_reg_form($form, &$form_state){
     $form['sect_1']['phone'] = array(
         '#type' => 'textfield',
         '#title' => 'Phone Number',
+        '#maxlength' => 10,
     );
     
     $form['sect_2'] = array(
@@ -451,6 +458,13 @@ function current_posts_reg_form_validate($form, &$form_state){
     $year_of_birth = $form_state['values']['dob']['year'];
     if ($year_of_birth && ($year_of_birth < 1900 || $year_of_birth > 2000)) {
       form_set_error('year_of_birth', t('Enter a year between 1900 and 2000.'));
+    }
+    
+    $phone = $form_state['values']['phone'];
+    if (!empty($phone) && !is_numeric($phone)){
+        form_set_error('phone_number', t('Phone number must be number'));
+    } elseif (!empty($phone) && is_numeric($phone) && strlen($phone) < 9) {
+        form_set_error('phone_number', t('Phone number is not completed'));
     }
 }
 
@@ -570,7 +584,7 @@ function current_posts_applicant_info_page() {
     );
     } else {
 //        debug($_SESSION['form_values']);
-    $name = $_SESSION['form_values']['reg_form']['reg_name'] . ' ' . $_SESSION['form_values']['reg_form']['reg_family_name'];;
+    $name = $_SESSION['form_values']['reg_form']['reg_name'] . ' ' . $_SESSION['form_values']['reg_form']['reg_family_name'];
     $gender = $_SESSION['form_values']['reg_form']['gender'];
     $dob = $_SESSION['form_values']['reg_form']['dob']['month'] 
             . '-' . $_SESSION['form_values']['reg_form']['dob']['day'] 
@@ -582,15 +596,39 @@ function current_posts_applicant_info_page() {
     $semester = $_SESSION['form_values']['reg_form']['semester'];
     $major = $_SESSION['form_values']['reg_form']['preference_1'];
     
+    $t_dob = date($dob);
+//    debug($_SESSION['form_values']['reg_form']['major'][$major]);
+    
+    $query = db_query('INSERT INTO `user_info`(`family_name`, `name`, `gender`, `dob`, `pob`, `address`, `phone`, `acad_year`, `semester`, `major_id`) VALUES (\'' 
+            . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\',\''
+            . $_SESSION['form_values']['reg_form']['reg_name'] . '\',\''
+            . $gender . '\',\''
+            . $t_dob . '\',\''
+            . $pob . '\',\''
+            . $address . '\',\''
+            . $phone . '\',\''
+            . $acad_year . '\',\''
+            . $semester . '\',\''
+            . $major
+            . '\')');
+    
+    drupal_set_message('Register complete');
+    
+    if ($gender == 0){
+        $s_gender = 'F';
+    } else {
+        $s_gender = 'M';
+    }
+    
     $info = 'Name: ' . $name . '<br>'
-            . 'Gender: ' . $gender . '<br>'
+            . 'Gender: ' . $s_gender . '<br>'
             . 'Date of Birth: ' . $dob . '<br>'
             . 'Place of Birth: ' . $pob . '<br>'
             . 'Address: ' . $address . '<br>'
             . 'Phone: ' . $phone . '<br>'
             . 'Academic Year: ' . $acad_year . '<br>'
             . 'Semester: ' . $semester . '<br>'
-            . 'Major: ' . $major . '<br>'
+            . 'Major: ' . $_SESSION['form_values']['reg_form']['major'][$major] . '<br>'
             ;
     $dis = array(
         '#markup' => $info,
@@ -630,7 +668,7 @@ function current_posts_dept_form_submit($form, &$form_state){
     $d_name = $form_state['values']['dept_name'];
     $d_code = strtoupper($form_state['values']['dept_code']);
     
-    $query = db_query('INSERT INTO `major`(`name`, `code`) VALUES (\'' . $d_name . '\',\'' . $d_code . '\')');
+    $query = db_query('INSERT INTO `user_info`(`name`, `code`) VALUES (\'' . $d_name . '\',\'' . $d_code . '\')');
     
     drupal_set_message('Department added');
     

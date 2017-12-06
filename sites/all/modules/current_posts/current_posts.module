@@ -83,6 +83,13 @@ function current_posts_menu() {
       'access arguments' => array('administer'),
       
   );
+  
+  $items['update_application_form'] = array(
+      'title' => 'Update Application Form',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('current_posts_update_application_form'),
+      'access arguments' => array('administer'),
+  );
 
   return $items;
 }
@@ -325,25 +332,51 @@ function current_posts_results_page($var1, $var2) {
  * Example form: Registration application form
  */
 function current_posts_reg_form($form, &$form_state){
-//    if (empty($_POST)) {
-//        
-//    
+    if (!isset($_SESSION['u_info']) || empty($_SESSION['u_info'])){
+        $nid = 0;
+        $fname = '';
+        $name = '';
+        $gender = 0;
+        $dob = array('month' => 1, 'day' => 1, 'year' => 2000);
+        $pob = '';
+        $adr = '';
+        $phone = '';
+        $acad_year = '';
+        $semester = 1;
+        $major = 1;
+    } elseif (isset($_SESSION['u_info'])) {
+        $nid = $_SESSION['u_info']['nid'];
+        $fname = $_SESSION['u_info']['family_name'];
+        $name = $_SESSION['u_info']['name'];
+        $gender = $_SESSION['u_info']['gender'];
+        $dob = array('month' => $_SESSION['u_info']['bmonth'],
+            'day' => $_SESSION['u_info']['bday'],
+            'year' => $_SESSION['u_info']['byear']);
+        $pob = $_SESSION['u_info']['pob'];
+        $adr = $_SESSION['u_info']['address'];
+        $phone = $_SESSION['u_info']['phone'];
+        $acad_year = $_SESSION['u_info']['acad_year'];
+        $semester = $_SESSION['u_info']['semester'];
+        $major = $_SESSION['u_info']['major_id'];
+        unset($_SESSION['u_info']);
+    }
+    
+//    debug(!isset($_SESSION['u_info']) || empty($_SESSION['u_info']));
     $pref1 = array();
-//    $tmp = '';
     $query = db_query("SELECT `nid`, `name`, `code` FROM `major`");
     $records = $query->fetchAll();
     foreach ($records as $record) {
-//        foreach ($pref1 as &$value){
-//            $value = $record->name;
-//        }
-//        $tmp = $tmp . $record->name . ' (' . $record->code . ') <br>';
         $pref1[$record->nid] = $record->name . ' (' . $record->code . ')';
     }
-//    debug($pref1);
     
     $form['major'] = array(
         '#type' => 'value',
         '#value' => $pref1,
+    );
+    
+    $form['nid'] = array(
+        '#type' => 'hidden',
+        '#value' => $nid,
     );
     
     $form['sect_1'] = array(
@@ -356,12 +389,14 @@ function current_posts_reg_form($form, &$form_state){
     $form['sect_1']['reg_family_name'] = array(
         '#type' => 'textfield',
         '#title' => 'Family Name',
+        '#default_value' => $fname,
         '#required' => true,
     );
     
     $form['sect_1']['reg_name'] = array(
         '#type' => 'textfield',
         '#title' => 'Name',
+        '#default_value' => $name,
         '#required' => true,
     );
     
@@ -372,18 +407,21 @@ function current_posts_reg_form($form, &$form_state){
            0 => t('Female'),
            1 => t('Male'),
        ),
+        '#default_value' => $gender,
        '#required' => true,
     );
     
     $form['sect_1']['dob'] = array(
         '#type' => 'date',
         '#title' => 'Date of Birth',
+        '#default_value' => $dob,
         '#required' => true,
     );
     
     $form['sect_1']['pob'] = array(
         '#type' => 'textarea',
         '#title' => t('Place of Birth'),
+        '#default_value' => $pob,
         '#resizable' => FALSE,
         '#required' => true,
     );
@@ -391,11 +429,13 @@ function current_posts_reg_form($form, &$form_state){
     $form['sect_1']['address'] = array(
         '#type' => 'textfield',
         '#title' => 'Address in Cambodia',
+        '#default_value' => $adr,
     );
     
     $form['sect_1']['phone'] = array(
         '#type' => 'textfield',
         '#title' => 'Phone Number',
+        '#default_value' => $phone,
         '#maxlength' => 10,
     );
     
@@ -414,6 +454,7 @@ function current_posts_reg_form($form, &$form_state){
            '2016-2017' => t('2016-2017'),
            '2015-2016' => t('2015-2016'),
         ),
+        '#default_value' => $acad_year,
         '#required' => true,
     );
     
@@ -421,6 +462,7 @@ function current_posts_reg_form($form, &$form_state){
         '#type' => 'radios',
         '#title' => 'Semester',
         '#options' => array(1 => 'Semester 1', 2 => 'Semester 2'),
+        '#default_value' => $semester,
         '#required' => true,
     );
     
@@ -428,6 +470,7 @@ function current_posts_reg_form($form, &$form_state){
         '#type' => 'select',
         '#title' => 'First Preference',
         '#options' => $pref1,
+        '#default_value' => $major,
         '#required' => true,
     );
     
@@ -437,10 +480,18 @@ function current_posts_reg_form($form, &$form_state){
         '#required' => true,
     );
     
+    if ($nid == 0) {
+        $sub_val = 'Submit';
+        $func_call = array('submit_info');
+    } else {
+        $sub_val = 'Update';
+        $func_call = array('update_info');
+    }
+    
     $form['submit_btn'] = array(
         '#type' => 'submit',
-        '#value' => t('Submit'),
-        
+        '#value' => $sub_val,
+        '#submit' => $func_call,
     );
 //    } else {
 //        $form = array(
@@ -471,106 +522,19 @@ function current_posts_reg_form_validate($form, &$form_state){
 /*
  * Submitting form
  */
-function current_posts_reg_form_submit($form, &$form_state){
+function submit_info($form, &$form_state){
     $_SESSION['form_values']['reg_form'] = $form_state['values'];
     $val = $_SESSION['form_values']['reg_form'];
-//    debug($val);
-//    debug($form_state['values']['reg_family_name'], 0, 1);
-//    $month = $form_state['values']['dob']['month'];
-//    switch ($month) {
-//    case 1:
-//        $month = 'Jan';
-//        break;
-//    case 2:
-//        $month = 'Feb';
-//        break;
-//    case 3:
-//        $month = 'Mar';
-//        break;
-//    case 4:
-//        $month = 'Apr';
-//        break;
-//    case 5:
-//        $month = 'May';
-//        break;
-//    case 6:
-//        $month = 'Jun';
-//        break;
-//    case 7:
-//        $month = 'Jul';
-//        break;
-//    case 8:
-//        $month = 'Aug';
-//        break;
-//    case 9:
-//        $month = 'Sep';
-//        break;
-//    case 10:
-//        $month = 'Oct';
-//        break;
-//    case 11:
-//        $month = 'Nov';
-//        break;
-//    case 12:
-//        $month = 'Dec';
-//        break;
-//    
-//    default:
-//        break;
-//}
-//    
-//    $form_state['redirect'] = 'applicant_info/' . $form_state['values']['reg_family_name']
-//            . '/' . $form_state['values']['reg_name']
-//            . '/' . $form_state['values']['gender']
-//            . '/' . $month . '-' . $form_state['values']['dob']['day'] . '-' . $form_state['values']['dob']['year']
-//            . '/' . $form_state['values']['pob']
-//            . '/' . $form_state['values']['address']
-//            . '/' . $form_state['values']['phone']
-//            . '/' . $form_state['values']['academic_year']
-//            . '/' . $form_state['values']['semester']
-//            . '/' . $form_state['values']['preference_1']
-//            ;
-    $form_state['redirect'] = 'applicant_info/' . $val['form_token'];
+    debug($val);
+    $form_state['redirect'] = 'applicant_info/' . $val['form_build_id'];
 }
 
-/*
- * Handle registration form input
- */
-//function current_posts_applicant_info_page($family_name, $name, $gender, $dob, $pob, $address, $phone, $acad_year, $semester, $major){
-//    switch ($gender) {
-//    case 0:
-//        $gender = 'Female';
-//        break;
-//    
-//    case 1:
-//        $gender = 'Male';
-//        break;
-//    }
-//    
-//    if ($address == '') {
-//        $address = 'N/A';
-//    }
-//    if ($phone == '') {
-//        $phone = 'N/A';
-//    }
-//    
-//    $info = 'Name: ' . $name . ' ' . $family_name . '<br>'
-//            . 'Gender: ' . $gender . '<br>'
-//            . 'Date of Birth: ' . $dob . '<br>'
-//            . 'Place of Birth: ' . $pob . '<br>'
-//            . 'Address: ' . $address . '<br>'
-//            . 'Phone: ' . $phone . '<br>'
-//            . 'Academic Year: ' . $acad_year . '<br>'
-//            . 'Semester: ' . $semester . '<br>'
-//            . 'Major: ' . $major . '<br>'
-//            ;
-//
-//    $dis = array(
-//        '#markup' => $info,
-//    );
-//    
-//    return $dis;
-//}
+function update_info($form, &$form_state){
+    $_SESSION['form_values']['reg_form'] = $form_state['values'];
+    $val = $_SESSION['form_values']['reg_form'];
+    debug($val);
+    $form_state['redirect'] = 'applicant_info/' . $val['form_build_id'];
+}
 
 function current_posts_applicant_info_page() {
     if (!isset($_SESSION)) {
@@ -586,9 +550,9 @@ function current_posts_applicant_info_page() {
 //        debug($_SESSION['form_values']);
     $name = $_SESSION['form_values']['reg_form']['reg_name'] . ' ' . $_SESSION['form_values']['reg_form']['reg_family_name'];
     $gender = $_SESSION['form_values']['reg_form']['gender'];
-    $dob = $_SESSION['form_values']['reg_form']['dob']['month'] 
-            . '-' . $_SESSION['form_values']['reg_form']['dob']['day'] 
-            . '-' . $_SESSION['form_values']['reg_form']['dob']['year'];
+    $bmonth = $_SESSION['form_values']['reg_form']['dob']['month'];
+    $bday = $_SESSION['form_values']['reg_form']['dob']['day'];
+    $byear = $_SESSION['form_values']['reg_form']['dob']['year'];
     $pob = $_SESSION['form_values']['reg_form']['pob'];
     $address = $_SESSION['form_values']['reg_form']['address'];
     $phone = $_SESSION['form_values']['reg_form']['phone'];
@@ -596,21 +560,20 @@ function current_posts_applicant_info_page() {
     $semester = $_SESSION['form_values']['reg_form']['semester'];
     $major = $_SESSION['form_values']['reg_form']['preference_1'];
     
-    $t_dob = date($dob);
-//    debug($_SESSION['form_values']['reg_form']['major'][$major]);
-    
-    $query = db_query('INSERT INTO `user_info`(`family_name`, `name`, `gender`, `dob`, `pob`, `address`, `phone`, `acad_year`, `semester`, `major_id`) VALUES (\'' 
-            . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\',\''
-            . $_SESSION['form_values']['reg_form']['reg_name'] . '\',\''
-            . $gender . '\',\''
-            . $t_dob . '\',\''
-            . $pob . '\',\''
-            . $address . '\',\''
-            . $phone . '\',\''
-            . $acad_year . '\',\''
-            . $semester . '\',\''
-            . $major
-            . '\')');
+//    $query = db_query('INSERT INTO `user_info`(`family_name`, `name`, `gender`, `bmonth`, `bday`, `byear`, `pob`, `address`, `phone`, `acad_year`, `semester`, `major_id`) VALUES (\'' 
+//            . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\',\''
+//            . $_SESSION['form_values']['reg_form']['reg_name'] . '\',\''
+//            . $gender . '\',\''
+//            . $bmonth . '\',\''
+//            . $bday . '\',\''
+//            . $byear . '\',\''
+//            . $pob . '\',\''
+//            . $address . '\',\''
+//            . $phone . '\',\''
+//            . $acad_year . '\',\''
+//            . $semester . '\',\''
+//            . $major
+//            . '\')');
     
     drupal_set_message('Register complete');
     
@@ -620,9 +583,10 @@ function current_posts_applicant_info_page() {
         $s_gender = 'M';
     }
     
-    $info = 'Name: ' . $name . '<br>'
+    $info = 'nid: ' . $_SESSION['form_values']['reg_form']['nid'] . '<br>'
+            . 'Name: ' . $name . '<br>'
             . 'Gender: ' . $s_gender . '<br>'
-            . 'Date of Birth: ' . $dob . '<br>'
+            . 'Date of Birth: ' . $bmonth . '-' . $bday . '-' . $byear . '<br>'
             . 'Place of Birth: ' . $pob . '<br>'
             . 'Address: ' . $address . '<br>'
             . 'Phone: ' . $phone . '<br>'
@@ -673,4 +637,32 @@ function current_posts_dept_form_submit($form, &$form_state){
     drupal_set_message('Department added');
     
 //    debug($d_name);
+}
+
+function current_posts_update_application_form($form, &$form_state) {
+    $form['search'] = array(
+        '#type' => 'textfield',
+        '#title' => 'Enter applicant name',
+        '#required' => true,
+    );
+    
+    $form['bnt_search'] = array(
+        '#type' => 'submit',
+        '#value' => 'Search',
+    );
+    
+    return $form;
+}
+
+function current_posts_update_application_form_validate($form, &$form_state){
+    
+}
+
+function current_posts_update_application_form_submit($form, &$form_state){
+    $query = db_query("SELECT * FROM `user_info` WHERE `name` = '" . $form_state['values']['search'] . "'");
+    $records = $query->fetchAssoc();
+    
+    $_SESSION['u_info'] = $records;
+    debug($_SESSION['u_info']);
+    $form_state['redirect'] = 'reg_form';
 }

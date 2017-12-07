@@ -90,6 +90,20 @@ function current_posts_menu() {
       'page arguments' => array('current_posts_update_application_form'),
       'access arguments' => array('administer'),
   );
+  
+//  $items['student_list/%'] = array(
+//      'title' => 'Update Application Form',
+//      'page callback' => 'drupal_get_form',
+//      'page arguments' => array('student_list_update_form'),
+//      'access callback' => true,
+//  );
+  
+  $items['student_list/%'] = array(
+      'title' => 'Update Application Form',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('student_list_update_form', 1),
+      'access callback' => true,
+  );
 
   return $items;
 }
@@ -358,7 +372,7 @@ function current_posts_reg_form($form, &$form_state){
         $acad_year = $_SESSION['u_info']['acad_year'];
         $semester = $_SESSION['u_info']['semester'];
         $major = $_SESSION['u_info']['major_id'];
-        unset($_SESSION['u_info']);
+//        unset($_SESSION['u_info']);
     }
     
 //    debug(!isset($_SESSION['u_info']) || empty($_SESSION['u_info']));
@@ -474,19 +488,22 @@ function current_posts_reg_form($form, &$form_state){
         '#required' => true,
     );
     
-    $form['agreement'] = array(
-        '#type' => 'checkbox',
-        '#title' => 'I agree with university rule and policy.',
-        '#required' => true,
-    );
-    
     if ($nid == 0) {
         $sub_val = 'Submit';
         $func_call = array('submit_info');
+        $check = 0;
     } else {
         $sub_val = 'Update';
         $func_call = array('update_info');
+        $check = 1;
     }
+    
+    $form['agreement'] = array(
+        '#type' => 'checkbox',
+        '#title' => 'I agree with university rule and policy.',
+        '#default_value' => $check,
+        '#required' => true,
+    );
     
     $form['submit_btn'] = array(
         '#type' => 'submit',
@@ -525,14 +542,14 @@ function current_posts_reg_form_validate($form, &$form_state){
 function submit_info($form, &$form_state){
     $_SESSION['form_values']['reg_form'] = $form_state['values'];
     $val = $_SESSION['form_values']['reg_form'];
-    debug($val);
+//    debug($val);
     $form_state['redirect'] = 'applicant_info/' . $val['form_build_id'];
 }
 
 function update_info($form, &$form_state){
     $_SESSION['form_values']['reg_form'] = $form_state['values'];
     $val = $_SESSION['form_values']['reg_form'];
-    debug($val);
+//    debug($val);
     $form_state['redirect'] = 'applicant_info/' . $val['form_build_id'];
 }
 
@@ -548,6 +565,8 @@ function current_posts_applicant_info_page() {
     );
     } else {
 //        debug($_SESSION['form_values']);
+    unset($_SESSION['u_info']);
+    $nid = $_SESSION['form_values']['reg_form']['nid'];
     $name = $_SESSION['form_values']['reg_form']['reg_name'] . ' ' . $_SESSION['form_values']['reg_form']['reg_family_name'];
     $gender = $_SESSION['form_values']['reg_form']['gender'];
     $bmonth = $_SESSION['form_values']['reg_form']['dob']['month'];
@@ -560,22 +579,42 @@ function current_posts_applicant_info_page() {
     $semester = $_SESSION['form_values']['reg_form']['semester'];
     $major = $_SESSION['form_values']['reg_form']['preference_1'];
     
-//    $query = db_query('INSERT INTO `user_info`(`family_name`, `name`, `gender`, `bmonth`, `bday`, `byear`, `pob`, `address`, `phone`, `acad_year`, `semester`, `major_id`) VALUES (\'' 
-//            . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\',\''
-//            . $_SESSION['form_values']['reg_form']['reg_name'] . '\',\''
-//            . $gender . '\',\''
-//            . $bmonth . '\',\''
-//            . $bday . '\',\''
-//            . $byear . '\',\''
-//            . $pob . '\',\''
-//            . $address . '\',\''
-//            . $phone . '\',\''
-//            . $acad_year . '\',\''
-//            . $semester . '\',\''
-//            . $major
-//            . '\')');
+    if ($nid != 0) {
+    $query = db_query('UPDATE `user_info` SET '
+            . '`family_name`=\'' . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\','
+            . '`name`=\'' . $_SESSION['form_values']['reg_form']['reg_name'] . '\','
+            . '`gender`=\'' . $gender . '\','
+            . '`bmonth`=\'' . $bmonth . '\','
+            . '`bday`=\'' . $bday . '\','
+            . '`byear`=\'' . $byear . '\','
+            . '`pob`=\'' . $pob . '\','
+            . '`address`=\'' . $address . '\','
+            . '`phone`=\'' . $phone . '\','
+            . '`acad_year`=\'' . $acad_year . '\','
+            . '`semester`=\'' . $semester . '\','
+            . '`major_id`=\'' . $major . '\' '
+            . 'WHERE `nid`=' . $nid);
+        
+        drupal_set_message('Updated complete');
+    } else {
     
-    drupal_set_message('Register complete');
+    $query = db_query('INSERT INTO `user_info`(`family_name`, `name`, `gender`, `bmonth`, `bday`, `byear`, `pob`, `address`, `phone`, `acad_year`, `semester`, `major_id`) VALUES (\'' 
+            . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\',\''
+            . $_SESSION['form_values']['reg_form']['reg_name'] . '\',\''
+            . $gender . '\',\''
+            . $bmonth . '\',\''
+            . $bday . '\',\''
+            . $byear . '\',\''
+            . $pob . '\',\''
+            . $address . '\',\''
+            . $phone . '\',\''
+            . $acad_year . '\',\''
+            . $semester . '\',\''
+            . $major
+            . '\')');
+    
+    drupal_set_message('Registered complete');
+    }
     
     if ($gender == 0){
         $s_gender = 'F';
@@ -583,7 +622,7 @@ function current_posts_applicant_info_page() {
         $s_gender = 'M';
     }
     
-    $info = 'nid: ' . $_SESSION['form_values']['reg_form']['nid'] . '<br>'
+    $info = 'nid: ' . $nid . '<br>'
             . 'Name: ' . $name . '<br>'
             . 'Gender: ' . $s_gender . '<br>'
             . 'Date of Birth: ' . $bmonth . '-' . $bday . '-' . $byear . '<br>'
@@ -659,10 +698,71 @@ function current_posts_update_application_form_validate($form, &$form_state){
 }
 
 function current_posts_update_application_form_submit($form, &$form_state){
-    $query = db_query("SELECT * FROM `user_info` WHERE `name` = '" . $form_state['values']['search'] . "'");
-    $records = $query->fetchAssoc();
+    $query = db_query("SELECT `nid` FROM `user_info` WHERE `name` LIKE '%" . $form_state['values']['search'] . "%'");
+    $numRow = $query->rowCount();
+    $path = '';
+    if ($numRow == 0) {
+        form_set_error('not found', t('Not found, please provide student full name'));
+    } elseif ($numRow == 1) {
+        $records = $query->fetchAssoc();
+//        $_SESSION['u_info'] = $records;
+//        $form_state['redirect'] = 'reg_form';
+//        debug($numRow);
+        debug($records['nid']);
+    } elseif ($numRow > 1) {
+        for ($i = 0; $i < $numRow; $i++) {
+            $records[$i] = $query->fetchAssoc();
+            $path = $path . $records[$i]['nid'] . '_';
+        }
+//        debug($path);
+//        $records = serialize($records);
+        $form_state['redirect'] = 'student_list/' . $path;
+    }
+}
+
+function student_list_update_form($form, &$form_state, $var1) {
     
-    $_SESSION['u_info'] = $records;
-    debug($_SESSION['u_info']);
-    $form_state['redirect'] = 'reg_form';
+//    debug($var1);
+    $id = explode("_", $var1);
+//    debug($id[0]);
+    $usr = array();
+    $records = array();
+    for ($i = 0; $i < sizeof($id) - 1; $i++){
+//        debug($id[$i]);
+        $usr[$i] = db_query("SELECT `nid`, `family_name`, `name` FROM `user_info` WHERE `nid` = " . $id[$i]);
+        $records[$i] = $usr[$i]->fetchAssoc();
+    }
+    
+//    debug($records);
+    
+//    $users = array
+//  (
+//    array('uid' => 1, 'first_name' => 'Indy', 'last_name' => 'Jones'),
+//    array('uid' => 2, 'first_name' => 'Darth', 'last_name' => 'Vader'),
+//    array('uid' => 3, 'first_name' => 'Super', 'last_name' => 'Man'),
+//  );
+ 
+  $header = array
+  (
+    'family_name' => t('First Name'),
+    'name' => t('Last Name'),
+  );
+  $options = array();
+  foreach($records as $user)
+  {
+    $options[$user['nid']] =array
+    (
+      'family_name' => $user['family_name'],
+      'name' => $user['name'],
+    );
+  }
+  $form['table'] = array
+  (
+    '#type' => 'tableselect',
+    '#header' => $header,
+    '#options' => $options,
+    '#empty' => t('No users found'),
+  );
+    
+    return $form;
 }

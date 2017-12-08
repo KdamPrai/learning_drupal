@@ -60,11 +60,17 @@ function current_posts_menu() {
       'access callback' => true,
   );
   
-  $items['reg_form'] = array(
+  $items['register'] = array(
+      'title' => 'Application Form',
+      'page callback' => 'register_page',
+      'access arguments' => array('access content'),
+  );
+  
+  $items['register/reg_form/%'] = array(
     'title' => 'Application Form',
     'description' => 'Entrance Exam Application Form',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('current_posts_reg_form'),
+    'page arguments' => array('current_posts_reg_form', 1, 2),
     'access arguments' => array('access content'),
     'access callback' => TRUE,
   );
@@ -85,7 +91,7 @@ function current_posts_menu() {
   );
   
   $items['update_application_form'] = array(
-      'title' => 'Update Application Form',
+      'title' => 'List Applicants',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('current_posts_update_application_form'),
       'access arguments' => array('administer'),
@@ -99,10 +105,17 @@ function current_posts_menu() {
 //  );
   
   $items['student_list/%'] = array(
-      'title' => 'Update Application Form',
+      'title' => 'List Applicants',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('student_list_update_form', 1),
-      'access callback' => true,
+      'access arguments' => array('administer'),
+  );
+  
+  $items['delete_acc/%'] = array(
+      'title' => 'Delete Account',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('student_delete_form', 1),
+      'access arguments' => array('administer'),
   );
 
   return $items;
@@ -345,8 +358,16 @@ function current_posts_results_page($var1, $var2) {
 /*
  * Example form: Registration application form
  */
-function current_posts_reg_form($form, &$form_state){
-    if (!isset($_SESSION['u_info']) || empty($_SESSION['u_info'])){
+function register_page(){
+    header('Location: register/reg_form/0');
+        $dis = array(
+        '#markup' => '',
+    );
+        return $dis;
+}
+
+function current_posts_reg_form($form, &$form_state, $var1, $var2){
+if (!isset($_SESSION['u_info']) || empty($_SESSION['u_info']) || $var2 == 0){
         $nid = 0;
         $fname = '';
         $name = '';
@@ -358,23 +379,43 @@ function current_posts_reg_form($form, &$form_state){
         $acad_year = '';
         $semester = 1;
         $major = 1;
-    } elseif (isset($_SESSION['u_info'])) {
-        $nid = $_SESSION['u_info']['nid'];
-        $fname = $_SESSION['u_info']['family_name'];
-        $name = $_SESSION['u_info']['name'];
-        $gender = $_SESSION['u_info']['gender'];
-        $dob = array('month' => $_SESSION['u_info']['bmonth'],
-            'day' => $_SESSION['u_info']['bday'],
-            'year' => $_SESSION['u_info']['byear']);
-        $pob = $_SESSION['u_info']['pob'];
-        $adr = $_SESSION['u_info']['address'];
-        $phone = $_SESSION['u_info']['phone'];
-        $acad_year = $_SESSION['u_info']['acad_year'];
-        $semester = $_SESSION['u_info']['semester'];
-        $major = $_SESSION['u_info']['major_id'];
+    } 
+//    elseif (isset($_SESSION['u_info'])) {
+//        $nid = $_SESSION['u_info']['nid'];
+//        $fname = $_SESSION['u_info']['family_name'];
+//        $name = $_SESSION['u_info']['name'];
+//        $gender = $_SESSION['u_info']['gender'];
+//        $dob = array('month' => $_SESSION['u_info']['bmonth'],
+//            'day' => $_SESSION['u_info']['bday'],
+//            'year' => $_SESSION['u_info']['byear']);
+//        $pob = $_SESSION['u_info']['pob'];
+//        $adr = $_SESSION['u_info']['address'];
+//        $phone = $_SESSION['u_info']['phone'];
+//        $acad_year = $_SESSION['u_info']['acad_year'];
+//        $semester = $_SESSION['u_info']['semester'];
+//        $major = $_SESSION['u_info']['major_id'];
+////        unset($_SESSION['u_info']);
+//    }
+
+    elseif ($_SESSION['u_info'] && is_numeric($var2) && $var2 != 0) {
+        $usr = db_query("SELECT * FROM `user_info` WHERE `nid` = " . $var2)->fetchAssoc();
+        $nid = $usr['nid'];
+        $fname = $usr['family_name'];
+        $name = $usr['name'];
+        $gender = $usr['gender'];
+        $dob = array('month' => $usr['bmonth'],
+            'day' => $usr['bday'],
+            'year' => $usr['byear']);
+        $pob = $usr['pob'];
+        $adr = $usr['address'];
+        $phone = $usr['phone'];
+        $acad_year = $usr['acad_year'];
+        $semester = $usr['semester'];
+        $major = $usr['major_id'];
 //        unset($_SESSION['u_info']);
     }
     
+//    debug($nid);
 //    debug(!isset($_SESSION['u_info']) || empty($_SESSION['u_info']));
     $pref1 = array();
     $query = db_query("SELECT `nid`, `name`, `code` FROM `major`");
@@ -559,7 +600,7 @@ function current_posts_applicant_info_page() {
         '#markup' => 'Please login.',
     );
     } elseif (empty($_SESSION['form_values'])) {
-        header('Location: ../reg_form');
+        header('Location: ..register/reg_form/0');
         $dis = array(
         '#markup' => '',
     );
@@ -681,13 +722,61 @@ function current_posts_dept_form_submit($form, &$form_state){
 function current_posts_update_application_form($form, &$form_state) {
     $form['search'] = array(
         '#type' => 'textfield',
-        '#title' => 'Enter applicant name',
+        '#title' => 'Search applicant name',
         '#required' => true,
     );
     
     $form['bnt_search'] = array(
         '#type' => 'submit',
         '#value' => 'Search',
+    );
+    
+    $query = db_query("SELECT `nid`, `family_name`, `name`, `gender`, `bmonth`, `bday`, `byear` FROM `user_info`");
+    $numRow = $query->rowCount();
+//    $records = $usr->fetchAssoc();
+//    debug($numRow);
+    
+    for ($i = 0; $i < $numRow; $i++) {
+            $records[$i] = $query->fetchAssoc();
+//            $path = $path . $records[$i]['nid'] . '_';
+        }
+//        debug($records);
+    $header = array(
+        'family_name' => t('First Name'),
+        'name' => t('Last Name'),
+        'gender' => t('Gender'),
+        'dob' => t('Date of Birth'),
+        'update' => t('Update'),
+        'delete' => t('Delete'),
+    );
+
+    $options = array();
+    foreach($records as $user){
+        if($user['gender'] == 0){
+            $str_gender = 'F';
+        } elseif ($user['gender'] == 1) {
+            $str_gender = 'M';
+        }
+
+        $options[$user['nid']] = array (
+            'family_name' => $user['family_name'],
+            'name' => $user['name'],
+            'gender' => $str_gender,
+            'dob' => $user['bmonth'] . '-' . $user['bday'] . '-' . $user['byear'],
+            'update' => l('Update', 'register/reg_form/' . $user['nid']),
+            'delete' => l('Delete', 'delete_acc/' . $user['nid']),
+        );
+    }
+
+    $form['add_new'] = array(
+        '#markup' => '<br>' . l('Add new applicant', 'register/reg_form/0'),
+    );
+    
+    $form['table1'] = array(
+        '#theme' => 'table',
+//        '#caption' => l('Add new applicant', 'register/reg_form/0'),
+        '#header' => $header,
+        '#rows' =>$options,
     );
     
     return $form;
@@ -698,24 +787,25 @@ function current_posts_update_application_form_validate($form, &$form_state){
 }
 
 function current_posts_update_application_form_submit($form, &$form_state){
-    $query = db_query("SELECT `nid` FROM `user_info` WHERE `name` LIKE '%" . $form_state['values']['search'] . "%'");
-    $numRow = $query->rowCount();
+    $search = $form_state['values']['search'];
+    $db_or = db_or()
+            ->condition('name', '%' . $search . '%', 'LIKE')
+            ->condition('family_name', '%' . $search . '%', 'LIKE');
+    $query = db_select('user_info', 'u')
+            ->fields('u', array('nid'))
+            ->condition($db_or)
+            ->execute()->fetchAll();
+    $numRow = count($query);
     $path = '';
     if ($numRow == 0) {
         form_set_error('not found', t('Not found, please provide student full name'));
-    } elseif ($numRow == 1) {
-        $records = $query->fetchAssoc();
-//        $_SESSION['u_info'] = $records;
-//        $form_state['redirect'] = 'reg_form';
-//        debug($numRow);
-        debug($records['nid']);
-    } elseif ($numRow > 1) {
+    } else {
         for ($i = 0; $i < $numRow; $i++) {
-            $records[$i] = $query->fetchAssoc();
-            $path = $path . $records[$i]['nid'] . '_';
+            $records[$i] = $query[$i]->nid;
+            $path = $path . $records[$i] . '_';
         }
 //        debug($path);
-//        $records = serialize($records);
+//        $_SESSION['u_info'] = TRUE;
         $form_state['redirect'] = 'student_list/' . $path;
     }
 }
@@ -729,7 +819,7 @@ function student_list_update_form($form, &$form_state, $var1) {
     $records = array();
     for ($i = 0; $i < sizeof($id) - 1; $i++){
 //        debug($id[$i]);
-        $usr[$i] = db_query("SELECT `nid`, `family_name`, `name` FROM `user_info` WHERE `nid` = " . $id[$i]);
+        $usr[$i] = db_query("SELECT `nid`, `family_name`, `name`, `gender`, `bmonth`, `bday`, `byear` FROM `user_info` WHERE `nid` = " . $id[$i]);
         $records[$i] = $usr[$i]->fetchAssoc();
     }
     
@@ -742,27 +832,83 @@ function student_list_update_form($form, &$form_state, $var1) {
 //    array('uid' => 3, 'first_name' => 'Super', 'last_name' => 'Man'),
 //  );
  
-  $header = array
-  (
-    'family_name' => t('First Name'),
-    'name' => t('Last Name'),
-  );
-  $options = array();
-  foreach($records as $user)
-  {
-    $options[$user['nid']] =array
-    (
-      'family_name' => $user['family_name'],
-      'name' => $user['name'],
+    $header = array(
+        'family_name' => t('First Name'),
+        'name' => t('Last Name'),
+        'gender' => t('Gender'),
+        'dob' => t('Date of Birth'),
+        'update' => t('Update'),
+        'delete' => t('Delete'),
     );
-  }
-  $form['table'] = array
-  (
-    '#type' => 'tableselect',
-    '#header' => $header,
-    '#options' => $options,
-    '#empty' => t('No users found'),
-  );
+
+    $options = array();
+    foreach($records as $user){
+        if($user['gender'] == 0){
+            $str_gender = 'F';
+        } elseif ($user['gender'] == 1) {
+            $str_gender = 'M';
+        }
+
+        $options[$user['nid']] = array (
+            'family_name' => $user['family_name'],
+            'name' => $user['name'],
+            'gender' => $str_gender,
+            'dob' => $user['bmonth'] . '-' . $user['bday'] . '-' . $user['byear'],
+            'update' => l('Update', 'register/reg_form/' . $user['nid']),
+            'delete' => l('Delete', 'delete_acc/' . $user['nid']),
+        );
+    }
+
+    $form['table1'] = array(
+        '#theme' => 'table',
+        '#header' => $header,
+        '#rows' =>$options,
+    );
     
     return $form;
+}
+
+function student_delete_form($form, &$form_state, $var1) {
+    $usr = db_query("SELECT `family_name`, `name` FROM `user_info` WHERE `nid` = " . $var1);
+    $record = $usr->fetchAssoc();
+//    debug($var1);
+    $path = '/update_application_form';
+    
+    $form['nid'] = array(
+        '#type' => 'hidden',
+        '#value' => $var1,
+    );
+    
+//    $form['name'] = array(
+//        '#markup' => 'Do you really want to delete ' . $record['name'] . ' ' . $record['family_name'] . '? <br>',
+//    );
+//    
+//    $form['btn_delete'] = array(
+//        '#type' => 'submit',
+//        '#value' => 'Delete',
+//        '#submit' => array('delete_info'),
+//    );
+//    
+//    $form['btn_cancel'] = array(
+//        '#type' => 'submit',
+//        '#value' => 'Cancel',
+//        '#submit' => array('cancel_del'),
+//    );
+    return confirm_form($form, $question='Do you really want delete ' . $record['name'] . ' ' . $record['family_name'] . '? <br>', $path, $description = "Warning, this is the last step before form gets submitted.", $yes = "Delete");
+//    return $form;
+}
+
+function student_delete_form_submit($form, &$form_state){
+//    debug($form_state['values']);
+    $query = db_delete('user_info');
+    $query->condition('nid', $form_state['values']['nid']);
+    $success = $query->execute();
+    if ($success) {
+        // Do something.
+//        drupal_set_message('Application deleted');
+        $form_state['redirect'] = '/update_application_form';
+    } else {
+        form_set_error('delete', t('Error occurs during process'));
+    }
+    //    $q = db_query("DELETE FROM `user_info` WHERE `nid` = " . $form_state['values']['nid']);
 }

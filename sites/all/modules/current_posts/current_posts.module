@@ -621,38 +621,73 @@ function current_posts_applicant_info_page() {
     $major = $_SESSION['form_values']['reg_form']['preference_1'];
     
     if ($nid != 0) {
-    $query = db_query('UPDATE `user_info` SET '
-            . '`family_name`=\'' . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\','
-            . '`name`=\'' . $_SESSION['form_values']['reg_form']['reg_name'] . '\','
-            . '`gender`=\'' . $gender . '\','
-            . '`bmonth`=\'' . $bmonth . '\','
-            . '`bday`=\'' . $bday . '\','
-            . '`byear`=\'' . $byear . '\','
-            . '`pob`=\'' . $pob . '\','
-            . '`address`=\'' . $address . '\','
-            . '`phone`=\'' . $phone . '\','
-            . '`acad_year`=\'' . $acad_year . '\','
-            . '`semester`=\'' . $semester . '\','
-            . '`major_id`=\'' . $major . '\' '
-            . 'WHERE `nid`=' . $nid);
+//    $query = db_query('UPDATE `user_info` SET '
+//            . '`family_name`=\'' . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\','
+//            . '`name`=\'' . $_SESSION['form_values']['reg_form']['reg_name'] . '\','
+//            . '`gender`=\'' . $gender . '\','
+//            . '`bmonth`=\'' . $bmonth . '\','
+//            . '`bday`=\'' . $bday . '\','
+//            . '`byear`=\'' . $byear . '\','
+//            . '`pob`=\'' . $pob . '\','
+//            . '`address`=\'' . $address . '\','
+//            . '`phone`=\'' . $phone . '\','
+//            . '`acad_year`=\'' . $acad_year . '\','
+//            . '`semester`=\'' . $semester . '\','
+//            . '`major_id`=\'' . $major . '\' '
+//            . 'WHERE `nid`=' . $nid);
+        
+        $query = db_update('user_info')
+                ->fields(array(
+                    'family_name' => $_SESSION['form_values']['reg_form']['reg_family_name'],
+                    'name' => $_SESSION['form_values']['reg_form']['reg_name'],
+                    'gender' => $gender,
+                    'bmonth' => $bmonth,
+                    'bday' => $bday,
+                    'byear' => $byear,
+                    'pob' => $pob,
+                    'address' => $address,
+                    'phone' => $phone,
+                    'acad_year' => $acad_year,
+                    'semester' => $semester,
+                    'major_id' => $major,
+                ))
+                ->condition('nid', $nid, '=')
+                ->execute();
         
         drupal_set_message('Updated complete');
     } else {
     
-    $query = db_query('INSERT INTO `user_info`(`family_name`, `name`, `gender`, `bmonth`, `bday`, `byear`, `pob`, `address`, `phone`, `acad_year`, `semester`, `major_id`) VALUES (\'' 
-            . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\',\''
-            . $_SESSION['form_values']['reg_form']['reg_name'] . '\',\''
-            . $gender . '\',\''
-            . $bmonth . '\',\''
-            . $bday . '\',\''
-            . $byear . '\',\''
-            . $pob . '\',\''
-            . $address . '\',\''
-            . $phone . '\',\''
-            . $acad_year . '\',\''
-            . $semester . '\',\''
-            . $major
-            . '\')');
+//    $query = db_query('INSERT INTO `user_info`(`family_name`, `name`, `gender`, `bmonth`, `bday`, `byear`, `pob`, `address`, `phone`, `acad_year`, `semester`, `major_id`) VALUES (\'' 
+//            . $_SESSION['form_values']['reg_form']['reg_family_name'] . '\',\''
+//            . $_SESSION['form_values']['reg_form']['reg_name'] . '\',\''
+//            . $gender . '\',\''
+//            . $bmonth . '\',\''
+//            . $bday . '\',\''
+//            . $byear . '\',\''
+//            . $pob . '\',\''
+//            . $address . '\',\''
+//            . $phone . '\',\''
+//            . $acad_year . '\',\''
+//            . $semester . '\',\''
+//            . $major
+//            . '\')');
+        
+        $query = db_insert('user_info')
+                ->fields(array(
+                    'family_name' => $_SESSION['form_values']['reg_form']['reg_family_name'],
+                    'name' => $_SESSION['form_values']['reg_form']['reg_name'],
+                    'gender' => $gender,
+                    'bmonth' => $bmonth,
+                    'bday' => $bday,
+                    'byear' => $byear,
+                    'pob' => $pob,
+                    'address' => $address,
+                    'phone' => $phone,
+                    'acad_year' => $acad_year,
+                    'semester' => $semester,
+                    'major_id' => $major,
+                ))
+                ->execute();
     
     drupal_set_message('Registered complete');
     }
@@ -767,6 +802,8 @@ function current_posts_update_application_form($form, &$form_state) {
             'delete' => l('Delete', 'delete_acc/' . $user['nid']),
         );
     }
+    
+    $_SESSION['u_info'] = TRUE;
 
     $form['add_new'] = array(
         '#markup' => '<br>' . l('Add new applicant', 'register/reg_form/0'),

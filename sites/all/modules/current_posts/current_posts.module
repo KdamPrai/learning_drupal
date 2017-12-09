@@ -97,12 +97,12 @@ function current_posts_menu() {
       'access arguments' => array('administer'),
   );
   
-//  $items['student_list/%'] = array(
-//      'title' => 'Update Application Form',
-//      'page callback' => 'drupal_get_form',
-//      'page arguments' => array('student_list_update_form'),
-//      'access callback' => true,
-//  );
+  $items['student_list/autocomplete'] = array(
+      'title' => 'Autocomplete for students',
+      'page callback' => '_student_autocomplete',
+      'access arguments' => array('administer'),
+      'type' => MENU_CALLBACK,
+  );
   
   $items['student_list/%'] = array(
       'title' => 'List Applicants',
@@ -754,11 +754,30 @@ function current_posts_dept_form_submit($form, &$form_state){
 //    debug($d_name);
 }
 
+/*
+ * autocomplete function for searching student
+ * $string: student name
+ */
+function _student_autocomplete($string){
+    $matches = array();
+    $result = db_select('user_info', 'u')
+            ->fields('u', array('family_name', 'name'))
+            ->condition('name', '%' . db_like($string) . '%', 'LIKE')
+            ->execute();
+    
+    foreach ($result as $row){
+        $matches[$row->name] = check_plain($row->name . ' ' .$row->family_name);
+    }
+    
+    drupal_json_output($matches);
+}
+
 function current_posts_update_application_form($form, &$form_state) {
     $form['search'] = array(
         '#type' => 'textfield',
         '#title' => 'Search applicant name',
         '#required' => true,
+        '#autocomplete_path' => 'student_list/autocomplete',
     );
     
     $form['bnt_search'] = array(
@@ -916,21 +935,6 @@ function student_delete_form($form, &$form_state, $var1) {
         '#value' => $var1,
     );
     
-//    $form['name'] = array(
-//        '#markup' => 'Do you really want to delete ' . $record['name'] . ' ' . $record['family_name'] . '? <br>',
-//    );
-//    
-//    $form['btn_delete'] = array(
-//        '#type' => 'submit',
-//        '#value' => 'Delete',
-//        '#submit' => array('delete_info'),
-//    );
-//    
-//    $form['btn_cancel'] = array(
-//        '#type' => 'submit',
-//        '#value' => 'Cancel',
-//        '#submit' => array('cancel_del'),
-//    );
     return confirm_form($form, $question='Do you really want delete ' . $record['name'] . ' ' . $record['family_name'] . '? <br>', $path, $description = "Warning, this is the last step before form gets submitted.", $yes = "Delete");
 //    return $form;
 }

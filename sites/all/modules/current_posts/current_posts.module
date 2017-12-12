@@ -117,6 +117,13 @@ function current_posts_menu() {
       'page arguments' => array('student_delete_form', 1),
       'access arguments' => array('administer'),
   );
+  
+  $items['current_posts/display_node'] = array(
+      'title' => 'Display Node',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('current_posts_display_node'),
+      'access arguments' => array('administer'),
+  );
 
   return $items;
 }
@@ -952,4 +959,38 @@ function student_delete_form_submit($form, &$form_state){
         form_set_error('delete', t('Error occurs during process'));
     }
     //    $q = db_query("DELETE FROM `user_info` WHERE `nid` = " . $form_state['values']['nid']);
+}
+
+function current_posts_display_node(){
+    $query = db_select('node', 'n')
+            ->fields('n', array('nid'))
+            ->orderBy('nid', 'ASC')
+            ->execute()
+            ->fetchAll();
+    $count = count($query);
+//    debug($count);
+//    debug($query, 0, 1);
+    for ($i = 0; $i < $count; $i++){
+        
+    }
+    debug(node_load(11), 0, 1);
+    
+    $header = array(
+        'family_name' => t('Title'),
+        'name' => t('Type'),
+        'gender' => t('Author'),
+        'dob' => t('Status'),
+        'update' => t('Updated'),
+        'delete' => t('Operations'),
+    );
+    
+    $options = array();
+    
+    $form['table1'] = array(
+        '#theme' => 'table',
+        '#header' => $header,
+        '#rows' =>$options,
+    );
+    
+    return $form;
 }

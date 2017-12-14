@@ -5,3 +5,4 @@ sites/*/settings*.php
 sites/*/files
 sites/*/private
 /sites/all/modules/custom/zregistration/nbproject/private/
+/sites/all/modules/current_posts/nbproject/private

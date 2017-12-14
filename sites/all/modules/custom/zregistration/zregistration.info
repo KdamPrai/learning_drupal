@@ -1,0 +1,6 @@
+name = Z Registration
+description = A module to register user/student
+core = 7.x
+
+; NEW LINE
+configure = admin/config/content/zregistration

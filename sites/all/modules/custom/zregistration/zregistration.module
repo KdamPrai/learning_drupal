@@ -1,2 +1,11 @@
 <?php
+function zregistration_help($path, $arg){
+  switch ($path) {
+    case "admin/help#zregistration":
+      $output = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Z Registration is a module to understand about registration process.') . '</p>';
+      return $output;
+      break; 
+  }
+}
 

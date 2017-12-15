@@ -1,4 +1,9 @@
 <?php
+
+/*
+ * Implement hook help to provide help description for zregistration custom
+ * module.
+ */
 function zregistration_help($path, $arg){
   switch ($path) {
     case "admin/help#zregistration":
@@ -9,3 +14,61 @@ function zregistration_help($path, $arg){
   }
 }
 
+/*
+ * Implement hook menu to customize quick access menu to module feature
+ */
+function zregistration_menu() {
+    $items = array();
+    
+    $items['registration'] = array(
+        'title' => 'Registered Users',
+        'page callback' => 'zregistration_reg_page',
+        'access arguments' => array('administer'),
+    );
+    
+    return $items;
+}
+
+/*
+ * Page callback function to see registered users
+ */
+function zregistration_reg_page(){
+    $query = db_select('users_roles', 'ur')
+            ->fields('ur', array('uid'))
+            ->execute()
+            ->fetchCol();
+
+    $records = user_load_multiple($query);
+    
+    $header = array(
+        array('data' => 'Username', 'field' => 'username'),
+        'status' => 'Status',
+        'roles' => 'Roles',
+        'operations' => 'Operations',
+    );
+    
+    $space = str_repeat('&nbsp', 2);
+    $rows = array();
+    foreach($records as $user) {
+        $status = $user->status;
+        if ($status == 1) {
+            $str_status = 'active';
+        } else {
+            $str_status = 'blocked';
+        }
+        $roles = $user->roles;
+        $str_roles = end($roles);
+        $rows[$user->uid] = array(
+            'username' => l($user->name, 'user/' . $user->uid),
+            'status' => $str_status,
+            'roles' => $str_roles,
+            'operations' =>l('main profile', 'profile-main/' . $user->uid) . $space . l('student profile', 'profile-student_profile/' . $user->uid),
+        );
+    }
+    
+    $out = theme('table', array('header' => $header, 'rows' => $rows));
+    
+    return $out;
+}
+
+// alter form to validate that 

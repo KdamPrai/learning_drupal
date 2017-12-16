@@ -71,4 +71,27 @@ function zregistration_reg_page(){
     return $out;
 }
 
-// alter form to validate that 
+/*
+ * alter form to validate registration courses
+ */
+function zregistration_form_alter(&$form, &$form_state, $form_id){
+    if($form_id == 'profile2_edit_student_profile_form'){
+        debug($form['profile_student_profile']
+                ['field_registration']['und'][0]['field_reg_courses']['und']
+                , 0, 1);
+        $form['profile_student_profile']
+                ['field_registration']['und'][0]['field_reg_courses']['und']
+                ['#element_validate'][] = 'zregistration_courses_validate';
+    }
+}
+
+function zregistration_courses_validate($form, &$form_state){
+    if(1 == 1){
+        form_set_error('Test', 'Error test.');
+        debug($form_state['input'], 0, 1);
+    }
+    // the above part investigate which fields to capture value to validate
+    // the below part do the validate, the parameter for function is array
+    // if the array size is > 1, do the validation, else process updating
+    // the validation algo. in the writing book, flip-corner page
+}

@@ -87,39 +87,46 @@ function zregistration_courses_validate($form, &$form_state){
     $registration_sets = $form_state['input']['profile_student_profile']['field_registration']['und'];
     // check if more than 1 registration set (semester)
     if (sizeof($registration_sets) > 1){
-        $match = array(); // store match course(s) from previous semester
-        $count_intersect = 0; // count how many semesters that contain previous course(s)
-        $courses_error_msg = ''; // initial course(s) error msg, will concatenate when there is/are previous course(s)
-        
-        // loop through array and get i element to be ready to compare courses
-        for($i = 0; $i < sizeof($registration_sets) -1; $i++){
-            // loop through arry ang get element after i to compare with element i
-            for($j = $i+1; $j < sizeof($registration_sets); $j++){
-                // check same acad year and if there is same semester
-                if ($registration_sets[$i]['field_reg_academic_year']['und'] == $registration_sets[$j]['field_reg_academic_year']['und']) {
-                    if ($registration_sets[$i]['field_reg_semester']['und'] == $registration_sets[$j]['field_reg_semester']['und']){
-                        form_set_error('acad_year_semester_error', 'You cannot register to same year and same semester.');
-                    }
-                }
-                
-                // check if there are same courses
-                $intersect = array_intersect(
-                $registration_sets[$i]['field_reg_courses']['und'], 
-                $registration_sets[$j]['field_reg_courses']['und']);
-                // if there is at least 1 same course
-                if (count($intersect) > 0){
-                    $match[] = $intersect; // store course id to array
-                    $courses_name = taxonomy_term_load_multiple($match[$i]); // load course name from array
-                    $count_intersect += 1; // increase number of semester that contain previous course by one
-                    // loop to build error msg
-                    foreach($courses_name as $name){
-                        $courses_error_msg .= $name->name . ' is already taken in previous semester.<br>';
-                    }
-                }
+        // variable to store all intersect courses ID
+        $intersect = array();
+        // variable to store all courses on iteration
+        $combine_array = array();
+        // variable to store all courses error msg
+        $courses_error_msg = '';
+        // variable to store both academic year and semester
+        $acad_ym = array();
+        // loop through registration info set
+        foreach ($registration_sets as $info) {
+            // make an array of both academic year and semester
+            $a = array(0 => $info['field_reg_academic_year']['und'], 1 => $info['field_reg_semester']['und']);
+            // if that array is in our all year-semester array or not
+            if (!in_array($a, $acad_ym)){
+                // if no, put it in main array
+                array_push($acad_ym, $a);
+            } else {
+                // if yes, alert error
+                form_set_error('acad_year_semester_error', 'You cannot register to same year and same semester.');
+            }
+            
+            // get course ID
+            $course_id = $info['field_reg_courses']['und'];
+            // if the big array that store course ID is empty
+            if (empty($combine_array)) {
+                // put the first one to it
+                $combine_array = $course_id;
+            } else {
+                // compare the main array and course id, and put the intersect course to intersect array
+                $intersect = array_merge($intersect, array_intersect($combine_array, $course_id));
+                $combine_array = array_merge($combine_array, $course_id);
             }
         }
-        // if there is at least 1 semester contain retake course, display msg
-        if($count_intersect > 0){
+        
+        // if there is at least 1 course ID intersect, alert msg with course name
+        if (sizeof($intersect) > 0){
+            $courses_name = taxonomy_term_load_multiple($intersect);
+            foreach($courses_name as $name){
+                $courses_error_msg .= $name->name . ' is already taken in previous semester.<br>';
+            }
             form_set_error('retake_courses_error', $courses_error_msg);
         }
     }

@@ -35,6 +35,7 @@ function zregistration_menu() {
 function zregistration_reg_page(){
     $query = db_select('users_roles', 'ur')
             ->fields('ur', array('uid'))
+            ->condition('rid', 5, '=')
             ->execute()
             ->fetchCol();
 
@@ -43,7 +44,6 @@ function zregistration_reg_page(){
     $header = array(
         array('data' => 'Username', 'field' => 'username'),
         'status' => 'Status',
-        'roles' => 'Roles',
         'operations' => 'Operations',
     );
     
@@ -56,12 +56,9 @@ function zregistration_reg_page(){
         } else {
             $str_status = 'blocked';
         }
-        $roles = $user->roles;
-        $str_roles = end($roles);
         $rows[$user->uid] = array(
             'username' => l($user->name, 'user/' . $user->uid),
             'status' => $str_status,
-            'roles' => $str_roles,
             'operations' =>l('main profile', 'profile-main/' . $user->uid) . $space . l('student profile', 'profile-student_profile/' . $user->uid),
         );
     }
@@ -76,22 +73,54 @@ function zregistration_reg_page(){
  */
 function zregistration_form_alter(&$form, &$form_state, $form_id){
     if($form_id == 'profile2_edit_student_profile_form'){
-        debug($form['profile_student_profile']
-                ['field_registration']['und'][0]['field_reg_courses']['und']
-                , 0, 1);
         $form['profile_student_profile']
                 ['field_registration']['und'][0]['field_reg_courses']['und']
                 ['#element_validate'][] = 'zregistration_courses_validate';
     }
 }
 
+/*
+ * This function validate semester in academic year and also registration courses.
+ */
 function zregistration_courses_validate($form, &$form_state){
-    if(1 == 1){
-        form_set_error('Test', 'Error test.');
-        debug($form_state['input'], 0, 1);
+    // get registration info section
+    $registration_sets = $form_state['input']['profile_student_profile']['field_registration']['und'];
+    // check if more than 1 registration set (semester)
+    if (sizeof($registration_sets) > 1){
+        $match = array(); // store match course(s) from previous semester
+        $count_intersect = 0; // count how many semesters that contain previous course(s)
+        $courses_error_msg = ''; // initial course(s) error msg, will concatenate when there is/are previous course(s)
+        
+        // loop through array and get i element to be ready to compare courses
+        for($i = 0; $i < sizeof($registration_sets) -1; $i++){
+            // loop through arry ang get element after i to compare with element i
+            for($j = $i+1; $j < sizeof($registration_sets); $j++){
+                // check same acad year and if there is same semester
+                if ($registration_sets[$i]['field_reg_academic_year']['und'] == $registration_sets[$j]['field_reg_academic_year']['und']) {
+                    if ($registration_sets[$i]['field_reg_semester']['und'] == $registration_sets[$j]['field_reg_semester']['und']){
+                        form_set_error('acad_year_semester_error', 'You cannot register to same year and same semester.');
+                    }
+                }
+                
+                // check if there are same courses
+                $intersect = array_intersect(
+                $registration_sets[$i]['field_reg_courses']['und'], 
+                $registration_sets[$j]['field_reg_courses']['und']);
+                // if there is at least 1 same course
+                if (count($intersect) > 0){
+                    $match[] = $intersect; // store course id to array
+                    $courses_name = taxonomy_term_load_multiple($match[$i]); // load course name from array
+                    $count_intersect += 1; // increase number of semester that contain previous course by one
+                    // loop to build error msg
+                    foreach($courses_name as $name){
+                        $courses_error_msg .= $name->name . ' is already taken in previous semester.<br>';
+                    }
+                }
+            }
+        }
+        // if there is at least 1 semester contain retake course, display msg
+        if($count_intersect > 0){
+            form_set_error('retake_courses_error', $courses_error_msg);
+        }
     }
-    // the above part investigate which fields to capture value to validate
-    // the below part do the validate, the parameter for function is array
-    // if the array size is > 1, do the validation, else process updating
-    // the validation algo. in the writing book, flip-corner page
 }

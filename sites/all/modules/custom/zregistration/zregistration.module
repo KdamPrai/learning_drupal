@@ -116,7 +116,7 @@ function zregistration_courses_validate($form, &$form_state){
                 $combine_array = $course_id;
             } else {
                 // compare the main array and course id, and put the intersect course to intersect array
-                $intersect = array_merge($intersect, array_intersect($combine_array, $course_id));
+                $intersect += array_intersect($combine_array, $course_id);
                 $combine_array = array_merge($combine_array, $course_id);
             }
         }

@@ -63,7 +63,7 @@ function zregistration_reg_page(){
         );
     }
     
-    $out = theme('table', array('header' => $header, 'rows' => $rows));
+    $out = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => l('Add student', 'admin/people/create')));
     
     return $out;
 }

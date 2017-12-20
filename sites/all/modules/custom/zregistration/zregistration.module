@@ -26,6 +26,19 @@ function zregistration_menu() {
         'access arguments' => array('administer'),
     );
     
+    $items['registration/generate_pdf/%'] = array(
+        'title' => 'Student Information',
+        'page callback' => 'zregistration_generate_pdf',
+        'page arguments' => array(2),
+        'access arguments' => array('administer'),
+    );
+    
+    $items['registration/generate_excel'] = array(
+        'title' => 'Student List',
+        'page callback' => 'zregistration_generate_excel',
+        'access arguments' => array('administer'),
+    );
+    
     return $items;
 }
 
@@ -45,6 +58,7 @@ function zregistration_reg_page(){
         array('data' => 'Username', 'field' => 'username'),
         'status' => 'Status',
         'operations' => 'Operations',
+        'pdf' => 'Download Information',
     );
     
     $space = str_repeat('&nbsp', 2);
@@ -60,6 +74,7 @@ function zregistration_reg_page(){
             'username' => l($user->name, 'user/' . $user->uid),
             'status' => $str_status,
             'operations' =>l('main profile', 'profile-main/' . $user->uid) . $space . l('student profile', 'profile-student_profile/' . $user->uid),
+            'pdf' => l('here', 'registration/generate_pdf/' . $user->uid),
         );
     }
     
@@ -130,4 +145,159 @@ function zregistration_courses_validate($form, &$form_state){
             form_set_error('retake_courses_error', $courses_error_msg);
         }
     }
+}
+
+function zregistration_generate_pdf($uid){
+    $mpdf_path = libraries_get_path('mpdf');
+    if ($mpdf_path != ''){
+        require_once libraries_get_path('mpdf') . '/mpdf.php';
+        // define value
+        $profile = profile2_load_by_user($uid);
+        
+        $field_name = $profile['main']->field_full_name;
+        $name = $field_name['und'][0]['value'];
+        
+        $field_gender = $profile['main']->field_reg_gender;
+        $gender = $field_gender['und'][0]['value'];
+        
+        $field_dob = $profile['main']->field_reg_date_of_birth;
+        $dob = date('d-m-Y', strtotime($field_dob['und'][0]['value']));
+        
+        $field_pob = $profile['main']->field_reg_place_of_birth;
+        $pob = $field_pob['und'][0]['value'];
+        
+        $field_pschool = $profile['student_profile']->field_primary_school;
+        $pschool = $field_pschool['und'][0]['value'];
+        
+        $field_eschool = $profile['student_profile']->field_elementary_school;
+        $eschool = $field_eschool['und'][0]['value'];
+        
+        $field_hschool = $profile['student_profile']->field_high_school;
+        $hschool = $field_hschool['und'][0]['value'];
+        
+        $field_major = $profile['student_profile']->field_department_pref1;
+        $major_id = taxonomy_term_load($field_major['und'][0]['target_id']);
+        $major = $major_id->name;
+        
+        // from here define the layout of form
+        $html = '
+            <h1 style="text-align: center;">Student Information</h1>
+            <h3 style="background-color: #808080;">Section I: Student\'s Personal Details</h2>
+            <table style="height: 200px; width: 815px;">
+                <tbody>
+                    <tr>
+                        <td style="width: 385px;">Name</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $name . '</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 385px;">Gender</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $gender . '</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 385px;">Date of Birth</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $dob . '</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 385px;">Place of Birth</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $pob . '</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3 style="background-color: #808080;">Section II: Student\'s Educational Details</h2>
+            <table style="height: 500px; width: 815px;">
+                <tbody>
+                    <tr>
+                        <td style="width: 385px;">Primary School</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $pschool . '</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 385px;">Elementary School</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $eschool . '</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 385px;">High School</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $hschool . '</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 385px;">Major</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $major . '</td>
+                    </tr>';
+        $field_reg = $profile['student_profile']->field_registration;
+        $reg_collection_id = array();
+        foreach($field_reg['und'] as $reg){
+            $reg_collection_id[] = $reg['value'];
+        }
+        
+        $reg_collection = field_collection_item_load_multiple($reg_collection_id);
+        $academic_ys = array();
+        $semesters = array();
+        $courses = array();
+        foreach ($reg_collection as $val){
+            $field_academic = $val->field_reg_academic_year;
+            $academic_ys[] = $field_academic['und'][0]['value'];
+            
+            $field_semester = $val->field_reg_semester;
+            $semesters[] = $field_semester['und'][0]['value'];
+            
+            $field_courses = $val->field_reg_courses;
+            $courses[] = $field_courses['und'];
+        }
+        $academic = '';
+        $semester = '';
+        
+        foreach ($courses as $key=>$val1){
+            $academic = $academic_ys[$key];
+            $semester = $semesters[$key];
+            $html .= '<tr>
+                        <td style="width: 385px;">Academic Year</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $academic . '</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 385px;">Semester</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $semester . '</td>
+                    </tr>';
+            $c = '';
+            foreach ($val1 as $v){
+                $a = taxonomy_term_load($v['target_id']);
+                $d = $a->name;
+                $c .= $d . '<br>';
+            }
+            $html .= '<tr>
+                        <td style="width: 385px;">Courses</td>
+                        <td style="width: 19px;">:</td>
+                        <td style="width: 389px;">' . $c . '</td>
+                    </tr>';
+        }
+        $html .= '
+                </tbody>
+            </table>';
+    
+        // from here generate the pdf
+        $mpdf = new mPDF('c', 'A4');
+        $mpdf->writeHTML($html);
+        $mpdf->Output('student_info.pdf', 'I');
+    } else {
+        $out = array(
+            '#markup' => 'mPDF does not exist.',
+        );
+        return $out;
+    }
+}
+
+function zregistration_generate_excel(){
+    $phpexcel_path = libraries_get_path('phpexcel') . '/Classes/PHPExcel.php';
+    $out = array(
+            '#markup' => 'Hello',
+        );
+        return $out;
 }

@@ -51,7 +51,7 @@ function zregistration_reg_page(){
             ->condition('rid', 5, '=')
             ->execute()
             ->fetchCol();
-
+    
     $records = user_load_multiple($query);
     
     $header = array(
@@ -78,7 +78,7 @@ function zregistration_reg_page(){
         );
     }
     
-    $out = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => l('Add student', 'admin/people/create')));
+    $out = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => l('Add student', 'admin/people/create') . $space . l('Get List', '/registration/generate_excel')));
     
     return $out;
 }
@@ -295,9 +295,91 @@ function zregistration_generate_pdf($uid){
 }
 
 function zregistration_generate_excel(){
-    $phpexcel_path = libraries_get_path('phpexcel') . '/Classes/PHPExcel.php';
-    $out = array(
-            '#markup' => 'Hello',
+    $phpexcel_path = libraries_get_path('phpexcel');
+    if($phpexcel_path == ''){
+        require_once $phpexcel_path . '/Classes/PHPExcel.php';
+        
+        $excel = new PHPExcel();
+        $excel->setActiveSheetIndex(0)
+                ->setCellValue('A1', 'Registered Students List')
+                ->setCellValue('A3', 'Name')
+                ->setCellValue('B3', 'Gender')
+                ->setCellValue('C3', 'Date of Birth')
+                ->setCellValue('D3', 'Place of Birth')
+                ->setCellValue('E3', 'Primary School')
+                ->setCellValue('F3', 'Elementary School')
+                ->setCellValue('G3', 'High School')
+                ->setCellValue('H3', 'Department');
+        
+        $excel->getActiveSheet()->mergeCells('A1:H1');
+        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal('center');
+        
+        $row = 4;
+        $query = db_select('users_roles', 'ur')
+            ->fields('ur', array('uid'))
+            ->condition('rid', 5, '=')
+            ->execute()
+            ->fetchCol();
+        
+        // define values
+        foreach($query as $uid){
+            $profile = profile2_load_by_user($uid);
+
+            $field_name = $profile['main']->field_full_name;
+            $name = $field_name['und'][0]['value'];
+
+            $field_gender = $profile['main']->field_reg_gender;
+            $gender = $field_gender['und'][0]['value'];
+
+            $field_dob = $profile['main']->field_reg_date_of_birth;
+            $dob = date('d-m-Y', strtotime($field_dob['und'][0]['value']));
+
+            $field_pob = $profile['main']->field_reg_place_of_birth;
+            $pob = $field_pob['und'][0]['value'];
+
+            $field_pschool = $profile['student_profile']->field_primary_school;
+            $pschool = $field_pschool['und'][0]['value'];
+
+            $field_eschool = $profile['student_profile']->field_elementary_school;
+            $eschool = $field_eschool['und'][0]['value'];
+
+            $field_hschool = $profile['student_profile']->field_high_school;
+            $hschool = $field_hschool['und'][0]['value'];
+
+            $field_major = $profile['student_profile']->field_department_pref1;
+            $major_id = taxonomy_term_load($field_major['und'][0]['target_id']);
+            $major = $major_id->name;
+            
+            $excel->getActiveSheet()
+                    ->setCellValue('A'.$row, $name)
+                    ->setCellValue('B'.$row, $gender)
+                    ->setCellValue('C'.$row, $dob)
+                    ->setCellValue('D'.$row, $pob)
+                    ->setCellValue('E'.$row, $pschool)
+                    ->setCellValue('F'.$row, $eschool)
+                    ->setCellValue('G'.$row, $hschool)
+                    ->setCellValue('H'.$row, $major);
+                    
+            $row++;
+        }
+        
+        foreach(range('A','H') as $columnID) {
+            $excel->getActiveSheet()->getColumnDimension($columnID)
+                    ->setAutoSize(true);
+        }
+        
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="students.xlsx"');
+        header('Cache-Control: max-age=0');
+        
+        $file = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
+        $file->save('php://output');
+    } else {
+        $out = array(
+            '#markup' => 'PHPExcel does not exist.',
         );
         return $out;
+    }
 }
+
+//SELECT users.uid AS uid FROM users LEFT JOIN profile ON users.uid = profile.uid AND (profile.type = 'student_profile') INNER JOIN users_roles ON users.uid = users_roles.uid WHERE (( (users_roles.rid = '5') AND( (CONCAT_WS(' ', users.name) LIKE '%n%') )))

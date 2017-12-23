@@ -1,0 +1,27 @@
+td.label {
+  width: 385px;
+}
+
+td.colon {
+  width: 19px;
+}
+
+td.value {
+  width: 389px;
+}
+td.academic {
+  width: 150px;
+}
+
+td.semester {
+  width: 150px;
+}
+
+td.courses {
+  width: 500px;
+}
+td.courses, td.academic, td.semester, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}

@@ -30,17 +30,30 @@ function zregistration_menu() {
         'title' => 'Student Information',
         'page callback' => 'zregistration_generate_pdf',
         'page arguments' => array(2),
-        'access arguments' => array('administer'),
+        'access arguments' => array('access generate_pdf page'),
     );
     
     $items['registration/generate_excel/%'] = array(
         'title' => 'Student List',
         'page callback' => 'zregistration_generate_excel',
         'page arguments' => array(2),
-        'access arguments' => array('administer'),
+        'access arguments' => array('access generate_excel page'),
     );
     
     return $items;
+}
+
+function zregistration_permission(){
+    return array(
+        'access generate_pdf page' => array(
+            'title' => 'Permission to PDF Generator page',
+            'description' => '',
+        ),
+        'access generate_excel page' => array(
+            'title' => 'Permission to Excel Gernerator page',
+            'description' => '',
+        ),
+    );
 }
 
 /*

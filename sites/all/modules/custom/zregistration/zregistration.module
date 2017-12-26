@@ -33,10 +33,9 @@ function zregistration_menu() {
         'access arguments' => array('access generate_pdf page'),
     );
     
-    $items['registration/generate_excel/%'] = array(
+    $items['registration/generate_excel'] = array(
         'title' => 'Student List',
         'page callback' => 'zregistration_generate_excel',
-        'page arguments' => array(2),
         'access arguments' => array('access generate_excel page'),
     );
     
@@ -308,7 +307,7 @@ function zregistration_generate_pdf($uid){
     }
 }
 
-function zregistration_generate_excel($var1){
+function zregistration_generate_excel(){
     $phpexcel_path = libraries_get_path('phpexcel');
     if($phpexcel_path != ''){
         require_once $phpexcel_path . '/Classes/PHPExcel.php';
@@ -330,6 +329,7 @@ function zregistration_generate_excel($var1){
         
         $row = 4;
         
+        $var1 = $_GET['name_filter'];
         // requery -> 
         if ($var1 == '1' || $var1 == 1){
             $var1 = '';
@@ -399,9 +399,6 @@ function zregistration_generate_excel($var1){
         $file = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
         $file->save('php://output');
     } else {
-        $out = array(
-            '#markup' => 'argument: ' . $var1,
-        );
-        return $out;
+        return 'No PHPExcel Library';
     }
 }

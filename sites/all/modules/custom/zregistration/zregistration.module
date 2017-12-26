@@ -203,9 +203,9 @@ function zregistration_generate_pdf($uid){
                 <title>Studnent Info</title>
             </head>
             <body>
-            <h1 style=\"text-align: center;\">Student Information</h1>
-            <h3 style=\"background-color: #808080;\">Section I: Student\'s Personal Details</h3>
-            <table style=\"height: 200px; width: 815px;\">
+            <h1 style="text-align: center;">Student Information</h1>
+            <h3 style="background-color: #808080;">Section I: Student\'s Personal Details</h3>
+            <table style="height: 200px; width: 815px;">
                 <tbody>
                     <tr>
                         <td class="label">Name</td>
@@ -229,8 +229,8 @@ function zregistration_generate_pdf($uid){
                     </tr>
                 </tbody>
             </table>
-            <h3 style=\"background-color: #808080;\">Section II: Student\'s Educational Details</h3>
-            <table style=\"height: 500px; width: 815px;\">
+            <h3 style="background-color: #808080;">Section II: Student\'s Educational Details</h3>
+            <table style="height: 500px; width: 815px;">
                 <tbody>
                     <tr>
                         <td class="label">Primary School</td>
@@ -254,8 +254,8 @@ function zregistration_generate_pdf($uid){
                     </tr>
                     </tbody>
             </table>
-            <h3 style=\"background-color: #808080;\">Section III: Student\'s Courses Details</h3>
-            <table style=\"height: 500px; width: 800px;\">
+            <h3 style="background-color: #808080;">Section III: Student\'s Courses Details</h3>
+            <table style="height: 500px; width: 800px;">
                 <tbody>
                     <tr>
                         <th class="academic">Academic Year</th>

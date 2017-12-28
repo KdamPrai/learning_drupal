@@ -1,0 +1,7 @@
+name = Grading System
+description = A module for instructors to assign grade to students
+core = 7.x
+
+; NEW LINE
+configure = admin/config/content/grading_sys
+

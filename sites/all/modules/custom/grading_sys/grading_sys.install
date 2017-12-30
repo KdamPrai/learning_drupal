@@ -1,0 +1,40 @@
+<?php
+  function grading_sys_schema() {
+    $schema['students_grade'] = array(
+      'description' => 'The table to store students grade.',
+      'fields' => array(
+        'sgid' => array(
+          'description' => 'The primary identifier for grade of a student in course.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE),
+        'instructor_id' => array(
+          'description' => 'Instructor ID (uid of instructor).',
+          'type' => 'int',
+          'length' => 10,
+          'not null' => TRUE,
+          'default' => 0),
+        'student_id' => array(
+          'description' => 'Student ID (uid of student).',
+          'type' => 'int',
+          'length' => 10,
+          'not null' => TRUE,
+          'default' => 0),
+        'midter_grade' => array(
+          'description' => 'Midterm exam grade of a student.',
+          'type' => 'int',
+          'length' => 3,
+          'not null' => TRUE,
+          'default' => -1),
+        'final_grade' => array(
+          'description' => 'Final exam grade of a student.',
+          'type' => 'int',
+          'length' => 3,
+          'not null' => TRUE,
+          'default' => -1),
+        ),
+      'primary key' => array('sgid'),
+      );
+
+  return $schema;
+}

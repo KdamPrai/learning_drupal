@@ -1,1 +1,709 @@
+<?php
+/*
+ * Implement hook help to provide help description for grading_sys custom
+ * module.
+ */
+function grading_sys_help($path, $arg){
+  switch ($path) {
+    case "admin/help#grading_sys":
+      $output = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Grading System is a module to understand about grading system process.') . '</p>';
+      return $output;
+      break; 
+  }
+}
 
+function grading_sys_menu(){
+  $items = array();
+  
+  $items['current_ay_seme_form'] = array(
+    'title' => 'Set Current AY-S Form',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('grading_sys_current_ays_form'),
+    'access arguments' => array('administer'),
+  );
+  
+  $items['courses_list'] = array(
+    'title' => 'Courses List',
+    'page callback' => 'grading_sys_courses_list',
+    'access arguments' => array('access courses list page'),
+  );
+  
+  $items['courses_list/assign_grade'] = array(
+    'title' => 'Assign Grade',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('grading_sys_grade_form'),
+    'access arguments' => array('access grading page'),
+  );
+  
+  $items['courses_list/grade_report'] = array(
+    'title' => 'Grade Report',
+    'page callback' => 'grading_sys_grade_report',
+    'access arguments' => array('access grade report'),
+  );
+  
+  $items['courses_list/grade_report_pdf'] = array(
+    'title' => 'Grade Report',
+    'page callback' => 'grading_sys_grade_report_pdf',
+    'access arguments' => array('access grade report'),
+  );
+  
+  $items['instructor_list/autocomplete'] = array(
+      'title' => 'Autocomplete for instructors',
+      'page callback' => '_instructor_autocomplete',
+      'access arguments' => array('administer'),
+      'type' => MENU_CALLBACK,
+  );
+  
+  return $items;
+}
+
+function grading_sys_permission(){
+  return array(
+    'access grading page' => array(
+      'title' => t('Allow instructors to grade students'),
+    ),
+    
+    'access courses list page' => array(
+      'title' => t('Display all courses of each instructors'),
+    ),
+    
+    'access grade report' => array(
+      'title' => t('Provide grade result of a course'),
+    ),
+  );
+}
+
+function grading_sys_form_alter(&$form, &$form_state, $form_id){
+  if($form_id == 'profile2_edit_instructor_profile_form'){
+    // process get all selected courses from other instructors
+    $b = 17;
+    unset($form['profile_instructor_profile']['field_instructor_courses']['und'][0]['field_inst_courses']['und']['#options'][$b]);
+  }
+}
+
+function grading_sys_current_ays_form($form, &$form_state){
+  $sql = 'SELECT * FROM `current_ays`';
+  $query = db_query($sql);
+  $row_count = $query -> rowCount();
+  $result = $query -> fetchAssoc();
+  if ($row_count > 0){
+    $aysid = 1;
+    $ay = $result['acad_year'];
+    $seme = $result['semester'];
+  } else {
+    $aysid = 0;
+  }
+
+  $form['aysid'] = array(
+    '#type' => 'hidden',
+    '#value' => $aysid,
+  );
+  
+  $form['acad_year'] = array(
+    '#type' => 'select',
+    '#title' => t('Academic Year'),
+    '#options' => array(
+      '2016-2017' => '2016-2017',
+      '2017-2018' => '2017-2018',
+      '2018-2019' => '2018-2019',
+      '2019-2020' => '2019-2020',
+    ),
+    '#required' => true,
+    '#default_value' => $ay,
+    );
+  
+  $form['semester'] = array(
+    '#type' => 'select',
+    '#title' => t('Semester'),
+    '#options' => array(
+      'Semester 1' => 'Semester 1',
+      'Semester 2' => 'Semester 2',
+    ),
+    '#required' => true,
+    '#default_value' => $seme,
+    );
+  
+  $form['set_ays'] = array(
+    '#type' => 'submit',
+    '#value' => 'Set',
+  );
+  
+  return $form;
+}
+
+function grading_sys_current_ays_form_submit($form, &$form_state){
+  // process update current ays
+  if ($form_state['values']['aysid'] > 0){
+    $db_update = db_update('current_ays')
+        ->fields(array(
+          'acad_year' => $form_state['values']['acad_year'],
+          'semester' => $form_state['values']['semester'],
+        ))
+        ->condition('aysid', 1, '=')
+        ->execute();
+  } else {
+    $db_insert = db_insert('current_ays')
+        ->fields(array(
+          'acad_year' => $form_state['values']['acad_year'],
+          'semester' => $form_state['values']['semester'],
+        ))
+        ->execute();
+  }
+}
+
+function grading_sys_courses_list(){
+  $header = array(
+    'course_name' => 'Course Name',
+    'operations' => 'Operations',
+  );
+
+  $rows = array();
+  
+  // do courses query
+  global $user;
+  $uid = $user->uid;
+  $profile = profile2_load_by_user($uid);
+  $field_instructor = $profile['instructor_profile']->field_instructor_courses;
+  $courses = array();
+  
+  // query current ay-s to compare
+  $sql = 'SELECT * FROM `current_ays`';
+  $ays = db_query($sql)->fetchAssoc();
+  $current_ay = $ays['acad_year'];
+  $current_seme = $ays['semester'];
+  
+  foreach ($field_instructor['und'] as $instructor) {
+    $item = field_collection_item_load($instructor['value']);
+    $field_ay = $item->field_instructor_academic_year;
+    $acad_year = $field_ay['und'][0]['value'];
+    $field_semester = $item->field_instructor_semester;
+    $semester = $field_semester['und'][0]['value'];
+    // compare inst ay-s to current ay-s, if match process display courses
+    if ($current_ay == $acad_year && $current_seme == $semester){
+      $field_courses = $item->field_inst_courses;
+      $courses = $field_courses['und'];
+      foreach ($courses as $course_id) {
+        $course_taxonomy = taxonomy_term_load($course_id['target_id']);
+        $course_name = $course_taxonomy->name;
+        $rows[] = array(
+          'course_name' => $course_name,
+          'operations' => l('assign grade', 'courses_list/assign_grade', 
+              array('query' => array(
+                'inst_id' => $uid,
+                'course_id' => $course_id['target_id'], 
+                'semester' => $semester, 
+                'acad_year' => $acad_year,
+                ))) . ' - ' . l('grade report', 'courses_list/grade_report', 
+              array('query' => array(
+                'inst_id' => $uid,
+                'course_id' => $course_id['target_id'], 
+                'semester' => $semester, 
+                'acad_year' => $acad_year,
+                ))),
+        );
+      }
+    }
+  }
+//  debug($courses);
+  
+  $out = theme('table', array('header' => $header, 'rows' => $rows, 'empty' => 'No Course'));
+  
+  return $out;
+}
+
+function grading_sys_grade_form($form, &$form_state){
+  global $user;
+  $uid = $user->uid;
+  if (empty($_GET['inst_id']) || !isset($_GET['inst_id'])){
+    drupal_goto('courses_list');
+  } else if ($uid != $_GET['inst_id']){
+    drupal_access_denied();
+  }
+  
+  $sql = 'SELECT * FROM `current_ays`';
+  $ays = db_query($sql)->fetchAssoc();
+  $current_ay = $ays['acad_year'];
+  $current_seme = $ays['semester'];
+  
+  $inst_id = $_GET['inst_id'];
+  $acad_year = $_GET['acad_year'];
+  $semester = $_GET['semester'];
+  $course_id = $_GET['course_id'];
+  
+  if ($acad_year == $current_ay && $semester == $current_seme){
+    $course_taxonomy = taxonomy_term_load($course_id);
+    $course_name = $course_taxonomy->name;
+    drupal_set_title('Assign Grade: ' . $course_name);
+
+    $form = array();
+    $rows = array();
+    $students_id = array();
+
+    // do the query from student_grade table first
+    // if no entry, do the query from get method
+
+    $score_sql = "SELECT * FROM `student_grade` "
+        . "WHERE "
+        . "`inst_id` = " . $inst_id . " "
+        . "AND "
+        . "acad_year = '" . $acad_year . "' "
+        . "AND "
+        . "semester = '" . $semester . "' "
+        . "AND "
+        . "course_id = " . $course_id;
+    $query = db_query($score_sql);
+    $row_count = $query->rowCount();
+
+    if ($row_count > 0){
+      $results = $query->fetchAll();
+      foreach ($results as $result){
+  //      debug($result, 0, 1);
+        $student_id = $result->student_id;
+        $students_id[] = $student_id;
+        $user_result = profile2_load_by_user($student_id);
+        $field_name = $user_result['main']->field_full_name;
+        $name = $field_name['und'][0]['value'];
+        $midterm = $result->midterm_grade;
+        $final = $result->final_grade;
+
+        $rows[] = array(
+            'student_name' => $name,
+            $student_id.'_midterm' => array(
+              '#type' => 'textfield',
+              '#size' => 10,
+              '#default_value' => $midterm,
+            ),
+            $student_id.'_final' => array(
+              '#type' => 'textfield',
+              '#size' => 10,
+              '#default_value' => $final,
+            ),
+          );
+  //      debug($result->sgid, 0, 1);
+        $form[$student_id.'_sgid'] = array(
+          '#type' => 'hidden',
+          '#value' => $result->sgid,
+        );
+      }
+
+      $button_value = 'Update';
+    } else {
+      // process the thing
+      $sql = 'SELECT 
+        p.`uid` AS `Uid`, 
+        r.`entity_id` AS `Profile_ID`, 
+        a.`field_reg_academic_year_value` AS `Academic_Year`, 
+        s.`field_reg_semester_value` AS `Semester`, 
+        c.`entity_id` AS `Collection_ID`
+        FROM `field_data_field_registration` r
+        JOIN `field_data_field_reg_courses` c
+        ON r.`field_registration_value` = c.`entity_id`
+        JOIN `field_data_field_reg_semester` s
+        ON s.`entity_id` = c.`entity_id`
+        JOIN `field_data_field_reg_academic_year` a
+        on a.`entity_id` = c.`entity_id`
+        JOIN `profile` p
+        ON p.`pid` = r.`entity_id`
+        AND c.`field_reg_courses_target_id` = ' . $course_id;
+
+      $results = db_query($sql)
+          -> fetchAll();
+
+      foreach($results as $result){
+        if (($result->Semester == $semester) && ($result->Academic_Year == $acad_year)){
+          // get user from here
+          $student_id = $result->Uid;
+          $user_result = profile2_load_by_user($student_id);
+          $field_name = $user_result['main']->field_full_name;
+          $name = $field_name['und'][0]['value'];
+          $students_id[] = $student_id;
+          $rows[] = array(
+            'student_name' => $name,
+            $student_id.'_midterm' => array(
+              '#type' => 'textfield',
+              '#size' => 10,
+            ),
+            $student_id.'_final' => array(
+              '#type' => 'textfield',
+              '#size' => 10,
+            ),
+          );
+        }
+      }
+
+      $button_value = 'Submit';
+    }
+
+    // students list show here
+    $header = array(
+      'student_name' => 'Student Name',
+      'midter' => 'Midterm',
+      'final' => 'Final',
+    );
+
+    $form['score_table'] = array(
+      '#type' => 'tableform',
+      '#header' => $header,
+      '#options' =>$rows,
+      '#empty' => 'No studen enroll',
+    );
+
+    $form['inst_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $inst_id,
+    );
+
+    $form['acad_year'] = array(
+      '#type' => 'hidden',
+      '#value' => $acad_year,
+    );
+
+    $form['semester'] = array(
+      '#type' => 'hidden',
+      '#value' => $semester,
+    );
+
+    $form['course_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $course_id,
+    );
+
+    $form['students_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $students_id,
+    );
+
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => $button_value,
+    );
+  } else {
+    $form['ays_error'] = array(
+      '#markup' => 'No student',
+    );
+  }
+  return $form;
+}
+
+function grading_sys_grade_form_validate($form, &$form_state){
+  $students = $form_state['values']['students_id'];
+  foreach ($students as $student) {
+    $midterm = $form_state['values'][$student.'_midterm'];
+    $final = $form_state['values'][$student.'_final'];
+    if ($midterm == '' || !is_numeric($midterm) || $midterm > 100 || $midterm < 0) {
+      form_set_error('midterm', 'Invalid Midterm Score');
+    } else if ($final == '' || !is_numeric($final) || $final > 100 || $final < 0) {
+      form_set_error('final', 'Invalid Final Score');
+    }
+  }
+}
+
+function grading_sys_grade_form_submit($form, &$form_state){
+  $students = $form_state['values']['students_id'];
+  $course_id = $form_state['values']['course_id'];
+  $semester = $form_state['values']['semester'];
+  $acad_year = $form_state['values']['acad_year'];
+  $inst_id = $form_state['values']['inst_id'];
+  
+  if ($form_state['values']['submit'] == 'Submit') {
+    
+    // process grade
+    foreach ($students as $student) {
+      $midterm = $form_state['values'][$student.'_midterm'];
+      $final = $form_state['values'][$student.'_final'];
+      $student_id = $student;
+      $db_insert = db_insert('student_grade')
+          ->fields(array(
+            'inst_id' => $inst_id,
+            'acad_year' => $acad_year,
+            'semester' => $semester,
+            'course_id' => $course_id,
+            'student_id' => $student_id,
+            'midterm_grade' => $midterm,
+            'final_grade' => $final,
+          ))
+          ->execute();
+    }
+    
+    drupal_set_message('Saved');
+    $path = 'courses_list/grade_report';
+    drupal_goto($path, array('query'=>array(
+      'inst_id' => $inst_id, 
+      'acad_year' => $acad_year, 
+      'semester' => $semester, 
+      'course_id' => $course_id,
+    )));
+  } else if ($form_state['values']['submit'] == 'Update') {
+    
+    // process update score
+    foreach ($students as $student) {
+      $midterm = $form_state['values'][$student.'_midterm'];
+      $final = $form_state['values'][$student.'_final'];
+      $student_id = $student;
+      $sgid = $form_state['values'][$student.'_sgid'];
+      $db_update = db_update('student_grade')
+          ->fields(array(
+            'midterm_grade' => $midterm,
+            'final_grade' => $final,
+          ))
+          ->condition('sgid', $sgid, '=')
+          ->execute();
+    }
+    
+    drupal_set_message('Updated');
+    $path = 'courses_list/grade_report';
+    drupal_goto($path, array('query'=>array(
+      'inst_id' => $inst_id, 
+      'acad_year' => $acad_year, 
+      'semester' => $semester, 
+      'course_id' => $course_id,
+    )));
+  }
+}
+
+function grading_sys_grade_report(){
+  global $user;
+  $uid = $user->uid;
+  if (empty($_GET['inst_id']) || !isset($_GET['inst_id'])){
+    drupal_goto('courses_list');
+  } else if ($uid != $_GET['inst_id']){
+    drupal_access_denied();
+  }
+  
+  $sql = 'SELECT * FROM `current_ays`';
+  $ays = db_query($sql)->fetchAssoc();
+  $current_ay = $ays['acad_year'];
+  $current_seme = $ays['semester'];
+  
+  $rows = array();
+  
+  $inst_id = $_GET['inst_id'];
+  $acad_year = $_GET['acad_year'];
+  $semester = $_GET['semester'];
+  $course_id = $_GET['course_id'];
+  
+  if ($acad_year == $current_ay && $semester == $current_seme){
+  $course_taxonomy = taxonomy_term_load($course_id);
+  $course_name = $course_taxonomy->name;
+  drupal_set_title($course_name);
+// query students score
+  $sql = "SELECT * FROM `student_grade` "
+      . "WHERE "
+      . "`inst_id` = " . $inst_id . " "
+      . "AND "
+      . "acad_year = '" . $acad_year . "' "
+      . "AND "
+      . "semester = '" . $semester . "' "
+      . "AND "
+      . "course_id = " . $course_id;
+  $data = db_query($sql);
+  $results = $data -> fetchAll();
+//  debug($results, 0, 1);
+  foreach ($results as $result){
+    $student = profile2_load_by_user($result->student_id);
+    $field_name = $student['main']->field_full_name;
+    $student_name = $field_name['und'][0]['value'];
+    
+    $midterm = $result->midterm_grade;
+    $final = $result->final_grade;
+    $avg = ($midterm + $final) / 2;
+    $grade = _get_grade($avg);
+//    debug($grade, 0, 1);
+    $rows[] = array(
+      'name' => $student_name,
+      'midterm' => $midterm,
+      'final' => $final,
+      'avg' => $avg,
+      'grade' => $grade,
+    );
+  }
+  
+  $header = array(
+    'name' => 'Student Name',
+    'midterm' => 'Midterm',
+    'final' => 'Final',
+    'avg' => 'Average',
+    'grade' => 'Grade',
+  );
+  
+  $table = array(
+    'header' => $header,
+    'rows' => $rows,
+    'empty' => 'No student enroll.',
+  );
+  
+  $out = theme('table', $table);
+  
+  $out .= l('Get as PDF', 'courses_list/grade_report_pdf', 
+      array('query' => 
+        array('inst_id' => $inst_id, 
+          'acad_year' => $acad_year, 
+          'semester' => $semester, 
+          'course_id' => $course_id)));
+  } else {
+    $out = 'No student';
+  }
+  
+  return $out;
+}
+
+function grading_sys_grade_report_pdf(){
+  $mpdf_path = libraries_get_path('mpdf');
+  if ($mpdf_path != ''){
+    require_once $mpdf_path . '/mpdf.php';
+    $mpdf = new mPDF('c', 'A4', 14);
+    // css path here
+    //
+    //
+    
+    global $user;
+    $uid = $user->uid;
+    if (empty($_GET['inst_id']) || !isset($_GET['inst_id'])){
+      drupal_goto('courses_list');
+    } else if ($uid != $_GET['inst_id']){
+      drupal_access_denied();
+    }
+
+    $sql = 'SELECT * FROM `current_ays`';
+    $ays = db_query($sql)->fetchAssoc();
+    $current_ay = $ays['acad_year'];
+    $current_seme = $ays['semester'];
+
+    $rows = array();
+
+    $inst_id = $_GET['inst_id'];
+    $acad_year = $_GET['acad_year'];
+    $semester = $_GET['semester'];
+    $course_id = $_GET['course_id'];
+
+    if ($acad_year == $current_ay && $semester == $current_seme){
+    $course_taxonomy = taxonomy_term_load($course_id);
+    $course_name = $course_taxonomy->name;
+    $out = '<div class="title">' . drupal_set_title($course_name) . '</div> <br>';
+  // query students score
+    $sql = "SELECT * FROM `student_grade` "
+        . "WHERE "
+        . "`inst_id` = " . $inst_id . " "
+        . "AND "
+        . "acad_year = '" . $acad_year . "' "
+        . "AND "
+        . "semester = '" . $semester . "' "
+        . "AND "
+        . "course_id = " . $course_id;
+    $data = db_query($sql);
+    $results = $data -> fetchAll();
+  //  debug($results, 0, 1);
+    foreach ($results as $result){
+      $student = profile2_load_by_user($result->student_id);
+      $field_name = $student['main']->field_full_name;
+      $student_name = $field_name['und'][0]['value'];
+
+      $midterm = $result->midterm_grade;
+      $final = $result->final_grade;
+      $avg = ($midterm + $final) / 2;
+      $grade = _get_grade($avg);
+  //    debug($grade, 0, 1);
+      $rows[] = array(
+        'name' => array('data' => $student_name, 'class' => 'name'),
+        'midterm' => array('data' => $midterm, 'class' => 'data'),
+        'final' => array('data' => $final, 'class' => 'data'),
+        'avg' => array('data' => $avg, 'class' => 'data'),
+        'grade' => array('data' => $grade, 'class' => 'data'),
+      );
+    }
+
+    $header = array(
+      'name' => array('data' => 'Student Name', 'class' => 'name'),
+      'midterm' => array('data' => 'Midterm', 'class' => 'data'),
+      'final' => array('data' => 'Final', 'class' => 'data'),
+      'avg' => array('data' => 'Average', 'class' => 'data'),
+      'grade' => array('data' => 'Grade', 'class' => 'data'),
+    );
+
+    $table = array(
+      'header' => $header,
+      'rows' => $rows,
+      'empty' => 'No student enroll.',
+    );
+
+    $out .= theme('table', $table);
+    
+    $css_path = drupal_get_path('module', 'grading_sys') . '/css/custom.css';
+    $stylesheet = file_get_contents($css_path);
+	  $mpdf -> writeHTML($stylesheet, 1);
+    $mpdf -> SetTitle($course_name);
+    $mpdf -> writeHTML($out);
+    $mpdf -> Output('grade_report.pdf', 'I');
+    } else {
+      return 'No student';
+    }
+  } else {
+    return 'mPDF does not exist.';
+  }
+}
+
+function _get_grade($avg){
+  if ($avg >= 90){
+    return 'A';
+  } else if ($avg >= 80){
+    return 'B';
+  } else if ($avg >= 70){
+    return 'C';
+  } else if ($avg >= 60){
+    return 'D';
+  } else if ($avg >= 50){
+    return 'E';
+  } else if ($avg < 50){
+    return 'F';
+  }
+}
+
+/*
+ * autocomplete function for searching student
+ * $string: student name
+ */
+function _instructor_autocomplete($string){
+    $matches = array();
+    $result = db_select('user_info', 'u')
+            ->fields('u', array('family_name', 'name'))
+            ->condition('name', '%' . db_like($string) . '%', 'LIKE')
+            ->execute();
+    
+    foreach ($result as $row){
+        $matches[$row->name . ' ' .$row->family_name] = check_plain($row->name . ' ' .$row->family_name);
+    }
+    
+    drupal_json_output($matches);
+}
+
+//global $user;
+//    debug($user->uid);
+
+//    $items['registration'] = array(
+//        'title' => 'Registered Users',
+//        'page callback' => 'zregistration_reg_page',
+//        'access arguments' => array('administer'),
+//      'access callback' => TRUE,
+//    );
+
+// get profile id, academic year, semester and collection id
+//SELECT 
+//r.`entity_id` AS `Profile ID`, 
+//a.`field_reg_academic_year_value` AS `Academic Year`, 
+//s.`field_reg_semester_value` AS `Semester`, 
+//c.`entity_id` AS `Collection ID` 
+//FROM `field_data_field_registration` r
+//JOIN `field_data_field_reg_courses` c
+//ON r.`field_registration_value` = c.`entity_id` 
+//JOIN `field_data_field_reg_semester` s
+//ON s.`entity_id` = c.`entity_id`
+//JOIN `field_data_field_reg_academic_year` a
+//on a.`entity_id` = c.`entity_id`
+//AND c.`field_reg_courses_target_id` = 17;
+
+//$sql = "SELECT * FROM `student_grade` 
+//WHERE `inst_id` = 36 
+//AND acad_year = \'2017-2018\' 
+//AND semester = \'Semester 1\' 
+//AND course_id = 23";

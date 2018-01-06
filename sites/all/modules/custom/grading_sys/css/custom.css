@@ -1,0 +1,16 @@
+.title {
+	text-align: center;
+}
+.name {
+  width: 300px;
+  border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+.data {
+  width: 150px;
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}

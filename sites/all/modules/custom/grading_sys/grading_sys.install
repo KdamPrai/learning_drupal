@@ -94,6 +94,33 @@
       ),
       'primary key' => array('icid'),
     );
+    
+    $schema['current_ays'] = array(
+      'description' => 'The table to store current Academic Year and Semester.',
+      'fields' => array(
+        'aysid' => array(
+          'description' => 'The primary identifier for current ays.',
+          'type' => 'serial',
+          'unsigned' => TRUE,
+          'not null' => TRUE
+        ),
+        'acad_year' => array(
+          'description' => 'Current academic year.',
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => ''
+        ),
+        'semester' => array(
+          'description' => 'Current semester.',
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => ''
+        ),
+      ),
+      'primary key' => array('aysid'),
+    );
 
   return $schema;
 }

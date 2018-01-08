@@ -77,6 +77,11 @@ function grading_sys_permission(){
 function grading_sys_form_alter(&$form, &$form_state, $form_id){
   if($form_id == 'profile2_edit_instructor_profile_form'){
     // process get all selected courses from other instructors
+    // query current ay-s
+    // load all users as instructor profile
+    // compare current ay-s to inst ay-s
+    // unset (course)
+    
     $b = 17;
     unset($form['profile_instructor_profile']['field_instructor_courses']['und'][0]['field_inst_courses']['und']['#options'][$b]);
   }

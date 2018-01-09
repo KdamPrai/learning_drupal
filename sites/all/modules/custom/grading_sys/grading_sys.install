@@ -54,46 +54,46 @@
       'primary key' => array('sgid'),
     );
     
-    $schema['instructor_course'] = array(
-      'description' => 'The table to store instructor-course relation.',
-      'fields' => array(
-        'icid' => array(
-          'description' => 'The primary identifier for grade of a student in course.',
-          'type' => 'serial',
-          'unsigned' => TRUE,
-          'not null' => TRUE
-        ),
-        'instructor_id' => array(
-          'description' => 'Instructor ID (uid of instructor).',
-          'type' => 'int',
-          'length' => 10,
-          'not null' => TRUE,
-          'default' => 0
-        ),
-        'acad_year_id' => array(
-          'description' => 'Academic year ID', //needed to generate report
-          'type' => 'varchar',
-          'length' => 16,
-          'not null' => TRUE,
-          'default' => '',
-        ),
-        'semester_id' => array(
-          'description' => 'Semester ID', //needed to generate report
-          'type' => 'varchar',
-          'length' => 16,
-          'not null' => TRUE,
-          'default' => '',
-        ),
-        'courses_id' => array(
-          'description' => 'Courses ID', //needed to generate report
-          'type' => 'int',
-          'length' => 10,
-          'not null' => TRUE,
-          'default' => 0,
-        ),
-      ),
-      'primary key' => array('icid'),
-    );
+//    $schema['instructor_course'] = array(
+//      'description' => 'The table to store instructor-course relation.',
+//      'fields' => array(
+//        'icid' => array(
+//          'description' => 'The primary identifier for grade of a student in course.',
+//          'type' => 'serial',
+//          'unsigned' => TRUE,
+//          'not null' => TRUE
+//        ),
+//        'instructor_id' => array(
+//          'description' => 'Instructor ID (uid of instructor).',
+//          'type' => 'int',
+//          'length' => 10,
+//          'not null' => TRUE,
+//          'default' => 0
+//        ),
+//        'acad_year_id' => array(
+//          'description' => 'Academic year ID', //needed to generate report
+//          'type' => 'varchar',
+//          'length' => 16,
+//          'not null' => TRUE,
+//          'default' => '',
+//        ),
+//        'semester_id' => array(
+//          'description' => 'Semester ID', //needed to generate report
+//          'type' => 'varchar',
+//          'length' => 16,
+//          'not null' => TRUE,
+//          'default' => '',
+//        ),
+//        'courses_id' => array(
+//          'description' => 'Courses ID', //needed to generate report
+//          'type' => 'int',
+//          'length' => 10,
+//          'not null' => TRUE,
+//          'default' => 0,
+//        ),
+//      ),
+//      'primary key' => array('icid'),
+//    );
     
     $schema['current_ays'] = array(
       'description' => 'The table to store current Academic Year and Semester.',

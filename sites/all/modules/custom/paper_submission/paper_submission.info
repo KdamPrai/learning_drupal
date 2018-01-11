@@ -1,0 +1,6 @@
+name = Paper Submission
+description = A module for submit research paper of conference
+core = 7.x
+
+; NEW LINE
+configure = admin/config/content/paper_submission

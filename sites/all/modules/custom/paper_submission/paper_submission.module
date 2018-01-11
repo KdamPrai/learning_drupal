@@ -1,0 +1,116 @@
+<?php
+
+function paper_submission_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#paper_submission":
+      $output = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Paper Submission is a helper module of paper submission form.') . '</p>';
+      return $output;
+      break; 
+  }
+}
+
+// create 2 system forms to set $sender_name, $from_email, 
+//   $subject and $message for both paper and account
+//function paper_submission_menu() {
+//  $items = array();
+//  
+//  
+//  
+//  return $items;
+//}
+
+function paper_submission_form_alter(&$form, &$form_state, $form_id){
+  if ($form_id == 'paper_submission_node_form') {
+    drupal_set_title('Paper Submission');
+    $con_pd = array(
+      '_none' => '- Select -',
+    );
+    
+    $sql = "SELECT `node`.`nid` FROM `node` WHERE `node`.`type` = 'conference'";
+    $nids = db_query($sql) -> fetchCol();
+    foreach ($nids as $nid){
+      $n = node_load($nid);
+      
+      // get conference date and format
+      $field_important_date = $n->field_important_date;
+      $date_collection = $field_important_date['und'][0]['value'];
+      $item = field_collection_item_load($date_collection);
+      $conf_dates = $item->field_conference_dates;
+      $date = date_format(date_create($conf_dates['und'][0]['value']), 'F d, Y');
+      
+      // get location
+      $field_venue = $n->field_venue;
+      $locality = $field_venue['und'][0]['locality'];
+      $country = location_country_name($field_venue['und'][0]['country']);
+      
+      $con_pd[] = $date . ' - ' . $locality . ', ' . $country;
+    }
+    
+    $form['field_position_title']['und']['#options']['_none'] = t('- Title -');
+    $form['field_country']['und']['#options']['_none'] = t('- Country -');
+    $form['field_select_conference']['und']['#options']['_none'] = t('- Select Conference -');
+    
+    $form['field_conference_place_date']['und']['#options'] = $con_pd;
+    
+    $form['#validate'][] = 'paper_submission_form_validate';
+  }
+}
+
+function paper_submission_form_validate($form, &$form_state){
+  debug($form_state['values'], 0, 1);
+  $mail = $form_state['values']['field_author_s_email']['und'][0]['email'];
+  $q = db_query("SELECT `users`.`uid` FROM `users` WHERE `users`.`mail` = '" . $mail . "'");
+  if ($q->rowCount() > 0){
+    $uid = $q -> fetchCol();
+    $form_state['values']['uid'] = $uid;
+  } elseif ($q->rowCount() == 0) {
+    // create user here
+//    $new_user = array(
+//      'name' => $mail,
+//      'pass' => '12345678', //user_password(8),
+//      'mail' => $mail,
+//      'status' => 1,
+//      'init' => $mail,
+//      'roles' => array(
+//        DRUPAL_AUTHENTICATED_RID => 'authenticated user',
+//        21 => 'participant',
+//      ),
+//    );
+//    $user = user_save('', $new_user);
+//    $uid = $user->uid;
+//    $form_state['values']['uid'] = $uid;
+//    $form_state['values']['mail'] = $new_user['mail'];
+//    $form_state['values']['pass'] = $new_user['pass'];
+    
+    // send email about account
+    if (module_exists('send_email') && function_exists('send_email')){
+//      module_name_function_name();
+      debug($mail, 0, 1);
+    }
+  }
+}
+
+function paper_submission_node_presave($node){
+  // process thing before save content type
+}
+
+function paper_submission_node_insert($node){
+  // send notify email to participant about received paper
+}
+
+//function paper_submission_custom_submit($form, &$form_state){
+//  _send_email_to_user($mail_type); // if type 'p', email for paper, 'a' for account
+//  
+//  // check if email not exist
+//  $sql = 'SELECT `users`.`uid` FROM `users` WHERE `users`.`mail` = ' . $email;
+//  $db_query = db_query($sql);
+//  
+//  if ($db_query -> rowCount() == 0){
+//    // create user
+//    
+//    
+//    // send email about account
+//    _send_email_to_user($mail_type, $email, $pass);
+//  }
+//}

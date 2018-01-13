@@ -31,6 +31,12 @@ function paper_submission_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
   
+  $items['paper_list'] = array(
+    'title' => 'List of paper',
+    'page callback' => array('paper_submission_list'),
+    'access arguments' => array('access paper list'),
+  );
+  
   return $items;
 }
 
@@ -38,7 +44,10 @@ function paper_submission_permission() {
   return array(
     'access email setting' => array(
       'title' => t('Access Email Setting for Paper Submission module'),
-    )
+    ),
+    'access paper list' => array(
+      'title' => t('Access list of participants paper'),
+    ),
   );
 }
 
@@ -221,3 +230,12 @@ function paper_submission_node_insert($node){
 //    _send_email_to_user($mail_type, $email, $pass);
 //  }
 //}
+
+function paper_submission_list(){
+  global $user;
+  $uid = $user->uid;
+  
+  
+  
+  return $out;
+}

@@ -132,42 +132,100 @@ function paper_submission_set_account_email_form_validate($form, &$form_state){
 function paper_submission_form_alter(&$form, &$form_state, $form_id){
   if ($form_id == 'paper_submission_node_form') {
     drupal_set_title('Paper Submission');
-    $con_pd = array(
-      '_none' => '- Select -',
+    $selected = isset($form_state['values']['field_conference_place_date']['und']) ? $form_state['values']['field_conference_place_date']['und'] : key(ajax_get_conference_options());
+    $form['field_conference_place_date']['und']['#options'] = ajax_get_conference_options();
+    $form['field_conference_place_date']['und']['#ajax'] = array(
+      'callback' => 'ajax_get_conference_callback',
+      'wrapper' => 'conference-div',
+      'method' => 'replace',
     );
-    
-    $sql = "SELECT `node`.`nid` FROM `node` WHERE `node`.`type` = 'conference'";
-    $nids = db_query($sql) -> fetchCol();
-    foreach ($nids as $nid){
-      $n = node_load($nid);
-      
-      // get conference date and format
-      $field_important_date = $n->field_important_date;
-      $date_collection = $field_important_date['und'][0]['value'];
-      $item = field_collection_item_load($date_collection);
-      $conf_dates = $item->field_conference_dates;
-      $date = date_format(date_create($conf_dates['und'][0]['value']), 'F d, Y');
-      
-      // get location
-      $field_venue = $n->field_venue;
-      $locality = $field_venue['und'][0]['locality'];
-      $country = location_country_name($field_venue['und'][0]['country']);
-      
-      $con_pd[] = $date . ' - ' . $locality . ', ' . $country;
-    }
+    $opt = ajax_get_conference_name_options($selected);
+//    if (empty($opt)){
+//      $opt = $form['field_select_conference']['und']['#options'];
+//      $form['field_select_conference'] = array(
+//      '#type' => 'value',
+//        '#value' => 0,
+//      '#prefix' => '<div id="conference-div">',
+//      '#suffix' => '</div>',
+//      );
+//    } else {
+      $form['field_select_conference']['und']['#prefix'] = '<div id="conference-div">';
+      $form['field_select_conference']['und']['#suffix'] = '</div>';
+      $form['field_select_conference']['und']['#options'] = $opt;
+//    }
     
     $form['field_position_title']['und']['#options']['_none'] = t('- Title -');
     $form['field_country']['und']['#options']['_none'] = t('- Country -');
-    $form['field_select_conference']['und']['#options']['_none'] = t('- Select Conference -');
-    
-    $form['field_conference_place_date']['und']['#options'] = $con_pd;
-    
-    $form['#validate'][] = 'paper_submission_form_validate';
+    $form['#submit'][] = 'paper_submission_form_submit';
   }
 }
 
-function paper_submission_form_validate($form, &$form_state){
-//  debug($form_state['values'], 0, 1);
+function ajax_get_conference_options(){
+  $sql = 'SELECT cd.`field_conference_dates_value` as `conf_date`, 
+      v.`field_venue_country`, v.`field_venue_locality`, 
+      d.`entity_id` AS `conf_id`
+      FROM `field_data_field_conference_dates` cd
+      JOIN `field_data_field_important_date` d
+      JOIN `field_data_field_venue` v
+      ON d.`entity_id` = v.`entity_id`
+      AND d.`field_important_date_value` = cd.`entity_id`';
+  $results = db_query($sql) -> fetchAll();
+  $date_venue = array('_none' => '- Select -');
+  foreach($results as $result){
+    $date = date_format(date_create($result->conf_date), 'F d, Y');
+    $venue = $result->field_venue_locality . ', ' . location_country_name($result->field_venue_country);
+    $date_venue[$result->conf_id] = $date . ' - ' . $venue;
+  }
+  $con_pd = array_unique($date_venue);
+  return !empty($results) ? $con_pd : array();
+}
+
+function ajax_get_conference_name_options($selected_pd){
+  $conf_name = array('_none' => '- Select -');
+  if ($selected_pd != '_none' && $selected_pd[0]['target_id'] != ''){
+    $select_opt = $selected_pd[0]['target_id'];
+    $node = node_load($select_opt);
+    $important_date = $node->field_important_date;
+    $dates_collection = field_collection_item_load($important_date['und'][0]['value']);
+    $conference_date = $dates_collection->field_conference_dates['und'][0]['value'];
+    
+    $venue = $node->field_venue['und'][0];
+    $country = $venue['country'];
+    $locality = $venue['locality'];
+    
+    $conf_name += get_conference_title_by_date_and_place($conference_date, $country, $locality);
+    
+  }
+  return $conf_name;
+}
+
+function get_conference_title_by_date_and_place($date, $country, $locality){
+  $sql = 'SELECT n.`title`
+    FROM `node` n
+    JOIN `field_data_field_venue` v
+    JOIN `field_data_field_important_date` idate
+    JOIN `field_data_field_conference_dates` cdate
+    ON v.`field_venue_country` = \'' . $country . '\'
+    AND v.`field_venue_locality` = \'' . $locality . '\'
+    AND cdate.`field_conference_dates_value` = \'' . $date . '\'
+    AND cdate.`entity_id` = idate.`field_important_date_value`
+    AND idate.`entity_id` = v.`entity_id`
+    AND n.`nid` = idate.`entity_id`';
+  $results = db_query($sql) -> fetchCol();
+  return $results;
+}
+
+function ajax_get_conference_callback($form, &$form_state){
+  
+  return array(
+        '#type' => 'ajax',
+        '#commands' => array(
+            ajax_command_replace("#conference-div", render($form['field_select_conference']['und'])),
+        )
+    );
+}
+
+function paper_submission_form_submit($form, &$form_state){
   $mail = $form_state['values']['field_author_s_email']['und'][0]['email'];
   $q = db_query("SELECT `users`.`uid` FROM `users` WHERE `users`.`mail` = '" . $mail . "'");
   if ($q->rowCount() > 0){
@@ -188,7 +246,7 @@ function paper_submission_form_validate($form, &$form_state){
     );
     $user = user_save('', $new_user);
     $uid = $user->uid;
-//    $uid = 1;
+
     variable_set('uid', $uid);
     variable_set('mail', $new_user['mail']);
     variable_set('pass', $new_user['pass']);
@@ -215,27 +273,34 @@ function paper_submission_node_insert($node){
   // send notify email to participant about received paper
 }
 
-//function paper_submission_custom_submit($form, &$form_state){
-//  _send_email_to_user($mail_type); // if type 'p', email for paper, 'a' for account
-//  
-//  // check if email not exist
-//  $sql = 'SELECT `users`.`uid` FROM `users` WHERE `users`.`mail` = ' . $email;
-//  $db_query = db_query($sql);
-//  
-//  if ($db_query -> rowCount() == 0){
-//    // create user
-//    
-//    
-//    // send email about account
-//    _send_email_to_user($mail_type, $email, $pass);
-//  }
-//}
-
 function paper_submission_list(){
   global $user;
   $uid = $user->uid;
   
+  $p_sql = 'SELECT n.`title`, c.`field_select_conference_target_id` as `conf` '
+      . 'FROM `node` n '
+      . 'JOIN `field_data_field_select_conference` c '
+      . 'ON c.`entity_id` = n.`nid` AND n.uid = ' . $uid;
   
+  $p_result = db_query($p_sql) -> fetchAll();
+  
+  $header = array(
+    'paper' => 'Paper Title',
+    'conf' => 'Applied Conference',
+  );
+  
+  $rows = array();
+  
+  foreach ($p_result as $paper){
+    $c_sql = 'SELECT n.`title` FROM `node` n WHERE n.nid = ' . $paper->conf;
+    $c_result = db_query($c_sql) -> fetchCol();
+    $rows[] = array(
+      'paper' => $paper->title,
+      'conf' => $c_result[0],
+    );
+  }
+  
+  $out = theme('table', array('header' => $header, 'rows' => $rows, 'empty' => 'No paper applied'));
   
   return $out;
 }

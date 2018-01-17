@@ -1,0 +1,222 @@
+<?php
+
+/*
+ * Implement Hook Permission
+ */
+function ajax_demo_permission() {
+    return array(
+        'access ajax demo page' => array(
+            'title' => t('Access ajax demo page'),
+            'description' => t('Allow user to access ajax demo page.'),
+        ),
+    );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function ajax_demo_menu() {
+	$items['ajax_demo_autocomplete'] = array(
+        'title' => 'Author autocomplete',
+        'page callback' => 'ajax_demo_autocomplete',
+        'access arguments' => array('access ajax demo page'),
+        'type' => MENU_CALLBACK,
+    );
+	
+    $items['ajax_demo'] = array(
+        'title' => t('Ajax Demo'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('ajax_demo_form'),
+        'access arguments' => array('access ajax demo page'),
+    );
+    return $items;
+}
+
+/**
+
+ */
+function ajax_demo_autocomplete($string = '') {
+    $matches = array();
+    if ($string) {
+        $query = db_select('users', 'u');
+		$query->innerJoin('node', 'n', 'n.uid = u.uid');
+		$query->condition('n.type', 'ajax_demo', '=');
+        $query->fields('u');
+        $query->condition('u.status', 1);
+        $query->condition(
+                        db_or()
+                        ->condition('u.name', '%' . db_like($string) . '%', 'LIKE')
+                        ->condition('u.uid', '%' . db_like($string) . '%', 'LIKE')
+                        ->condition('u.mail', '%' . db_like($string) . '%', 'LIKE')
+                )
+                ->range(0, 15);
+        $result = $query->execute();
+        foreach ($result as $user) {
+			$value = $user->name . ' (' . $user->uid . ')';
+            $matches[$value] = $value;
+        }
+    }
+    drupal_json_output($matches);
+    drupal_exit();
+}
+
+/*
+ * 
+ */
+function ajax_demo_get_autocomplete_id($string) {
+	$arr_string = explode('(', $string);
+    if (count($arr_string) > 1)
+        array_shift($arr_string);
+    $id = trim(str_replace(')', '', array_shift($arr_string)));
+    return $id;
+}
+
+/*
+ * 
+ */
+function ajax_demo_get_content_options($author_id = NULL) {
+	$options = array('_none' => ' - Select a content - ');
+	$query = db_select('node', 'n');
+	$query->condition('n.type', 'ajax_demo', '=');
+	if (is_numeric($author_id)) {
+		$query->condition('n.uid', $author_id, '=');
+	}
+	$query->fields('n', array('nid', 'title'));
+	$query->orderBy('n.title', 'ASC');
+	$result = $query->execute()->fetchAllKeyed();
+	return !empty($result) ? $options + $result : array();
+}
+
+/**
+ * ajax_demo_form
+ */
+function ajax_demo_form($form,&$form_state){
+	$css = '.body-content {padding: 10px; margin-top: 15px; margin-bottom: 15px; border: 1px solid #02AACE;}';
+    drupal_add_css($css, 'inline');
+	
+	$w = 1;
+    $form['author'] =array(
+        '#type'=>'textfield',
+        '#title'=>t('Author'),
+        '#size' => 45,
+        '#required' => true,
+        '#default_value' => '',
+		'#autocomplete_path' => 'ajax_demo_autocomplete',
+        '#attributes' => array(
+            'placeholder' => 'Write Username or User ID to search',
+            'onfocus' => "if (this.value == 'Write Username or User ID to search') {this.value = '';}",
+            'onblur' => "if (this.value == '') {this.value = 'Write Username or User ID to search';}"
+        ),
+		'#ajax' => array(
+            'callback' => 'ajax_demo_form_ajax_callback',
+            'wrapper' => array('select-content', 'body-content'),
+            'effect' => 'fade',
+        ),
+		'#weight' => $w++,
+    );
+	$author_id = '';
+    if (isset($form_state['input']['author'])) {
+        $author_id = ajax_demo_get_autocomplete_id($form_state['input']['author']);
+    }
+	
+	if (isset($form_state['input']['_triggering_element_name']) && $form_state['input']['_triggering_element_name'] == 'author') {
+        $form_state['input']['content_id'] = '';
+    }
+	
+	$content_opt = is_numeric($author_id) ? ajax_demo_get_content_options($author_id) : ajax_demo_get_content_options();
+    if (!empty($content_opt)) {
+        $form['content_id'] = array(
+            '#prefix' => '<div id="select-content">',
+            '#type' => 'select',
+            '#title' => 'Content',
+            '#options' => $content_opt,
+            '#description' => t('Select a content.'),
+            '#weight' => $w++,
+            '#suffix' => '</div>',
+            '#ajax' => array(
+                'callback' => 'ajax_demo_get_content_callback',
+                'wrapper' => 'body-content',
+                'effect' => 'fade',
+            ),
+        );
+    } else {
+        $form['content_id'] = array(
+            '#prefix' => '<div id="select-content">',
+            '#type' => 'value',
+            '#value' => 0,
+            '#weight' => $w++,
+            '#suffix' => '</div>',
+            '#ajax' => array(
+                'callback' => 'ajax_demo_get_content_callback',
+                'wrapper' => 'body-content',
+                'effect' => 'fade',
+            ),
+        );
+    }
+	
+	$content_id = '';
+    if (isset($form_state['input']['content_id']) && is_numeric($form_state['input']['content_id']) && $form_state['input']['content_id'] <> 0) {
+        $content_id = $form_state['input']['content_id'];
+    }
+	
+	$display = '';
+    if (is_numeric($content_id)) {
+        $node = node_load($content_id);
+		$body_info = field_attach_view('node', $node, 'full', NULL);
+		$display = isset($body_info['body'][0]['#markup']) ? '<div class=body-content>' . $body_info['body'][0]['#markup'] . '</div>' : trim($node->title);
+    }
+    $form['body_content'] = array(
+        '#markup' => $display,
+        '#prefix' => '<div id="body-content">',
+        '#weight' => $w++,
+        '#suffix' => '</div>',
+    );
+
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Submit',
+		'#weight' => $w++,
+    );
+    return $form;
+}
+
+/**
+ * 
+ */
+function ajax_demo_form_ajax_callback($form, &$form_state) {
+    $display = '';
+    $body_content = array(
+        '#markup' => $display,
+        '#prefix' => '<div id="body-content">',
+        '#weight' => 5,
+        '#suffix' => '</div>',
+    );
+    return array(
+        '#type' => 'ajax',
+        '#commands' => array(
+            ajax_command_replace("#select-content", render($form['content_id'])),
+            ajax_command_replace("#body-content", render($body_content))
+        )
+    );
+}
+
+/**
+ * 
+ */
+function ajax_demo_get_content_callback($form, &$form_state) {
+    return $form['body_content'];
+}
+
+/**
+ * 
+ */
+function ajax_demo_form_submit($form,&$form_state) {
+	$author = $form_state['values']['author'] != 'Write Username or User ID to search' ? $form_state['values']['author'] : 'Not selected';
+	$node = is_numeric($form_state['values']['content_id']) ? node_load($form_state['values']['content_id']) : array();
+	$content = isset($node->title) ? $node->title. ' (' . $node->nid . ')' : 'Not selected';
+	
+	
+	$msg = 'Author : ' . $author . '<br />';
+	$msg .= 'Content : ' . $content . '<br />';
+	drupal_set_message($msg);
+}

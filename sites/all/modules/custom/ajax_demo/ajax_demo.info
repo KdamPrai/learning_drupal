@@ -1,0 +1,4 @@
+name = Ajax Demo
+description = Ajax Demo
+core = 7.x
+package = Custom

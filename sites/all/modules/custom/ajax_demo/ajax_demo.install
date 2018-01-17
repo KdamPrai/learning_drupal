@@ -1,0 +1,36 @@
+<?php
+
+/*
+hook_install()
+
+*/
+function ajax_demo_install() {
+	$node_types = node_type_get_types();
+    if (!isset($node_types['ajax_demo'])) {
+        // Create class node type.
+        $content_type = array(
+            'type' => 'ajax_demo',  // Machine name
+            'name' => t('Ajax Demo'), // Title of content type
+            'base' => 'node_content',
+            'description' => t('Create list of ajax content'),
+            'title_label' => t('Title'),
+            'custom' => 1,
+            'modified' => 1,
+            'locked' => 0,
+        );
+        $content_type = node_type_set_defaults($content_type);
+		node_add_body_field($content_type, t('Detail'));
+        node_type_save($content_type);
+    }
+}
+
+/* 
+
+hook_uninstall() 
+
+*/
+function ajax_demo_uninstall() {
+	$ajax_nids = db_query('SELECT nid FROM {node} WHERE type = \'ajax_demo\'')->fetchCol();
+    node_delete_multiple($ajax_nids);
+    node_type_delete('ajax_demo');
+}

@@ -156,25 +156,23 @@ function paper_submission_form_alter(&$form, &$form_state, $form_id){
       'method' => 'replace',
     );
     $opt = ajax_get_conference_name_options($selected);
-//    if (empty($opt)){
-//      $opt = $form['field_select_conference']['und']['#options'];
-//      $form['field_select_conference'] = array(
-//      '#type' => 'value',
-//        '#value' => 0,
-//      '#prefix' => '<div id="conference-div">',
-//      '#suffix' => '</div>',
-//      );
-//    } else {
-      $form['field_select_conference']['und']['#prefix'] = '<div id="conference-div">';
-      $form['field_select_conference']['und']['#suffix'] = '</div>';
-      $form['field_select_conference']['und']['#options'] = $opt;
-//    }
+    if (empty($opt)){
+      $opt = $form['field_select_conference']['und']['#options'];
+    }
+    $form['field_select_conference']['und']['#prefix'] = '<div id="conference-div">';
+    $form['field_select_conference']['und']['#suffix'] = '</div>';
+    $form['field_select_conference']['und']['#options'] = $opt;
     
     $form['field_position_title']['und']['#options']['_none'] = t('- Title -');
     $form['field_country']['und']['#options']['_none'] = t('- Country -');
     $form['#submit'][] = 'paper_submission_form_submit';
+//    $form['#validate'][] = 'paper_submission_form_validate';
   }
 }
+
+//function paper_submission_form_validate($form, &$form_state){
+//  debug($form_state['values'], 0, 1);
+//}
 
 function ajax_get_conference_options(){
   $sql = 'SELECT cd.`field_conference_dates_value` as `conf_date`, 
@@ -197,7 +195,7 @@ function ajax_get_conference_options(){
 }
 
 function ajax_get_conference_name_options($selected_pd){
-  $conf_name = array('_none' => '- Select -');
+  $conf_name = array();
   if ($selected_pd != '_none' && $selected_pd[0]['target_id'] != ''){
     $select_opt = $selected_pd[0]['target_id'];
     $node = node_load($select_opt);
@@ -209,14 +207,13 @@ function ajax_get_conference_name_options($selected_pd){
     $country = $venue['country'];
     $locality = $venue['locality'];
     
-    $conf_name += get_conference_title_by_date_and_place($conference_date, $country, $locality);
-    
+    $conf_name = get_conference_title_by_date_and_place($conference_date, $country, $locality);
   }
   return $conf_name;
 }
 
 function get_conference_title_by_date_and_place($date, $country, $locality){
-  $sql = 'SELECT n.`title`
+  $sql = 'SELECT n.`nid`, n.`title`
     FROM `node` n
     JOIN `field_data_field_venue` v
     JOIN `field_data_field_important_date` idate
@@ -227,8 +224,12 @@ function get_conference_title_by_date_and_place($date, $country, $locality){
     AND cdate.`entity_id` = idate.`field_important_date_value`
     AND idate.`entity_id` = v.`entity_id`
     AND n.`nid` = idate.`entity_id`';
-  $results = db_query($sql) -> fetchCol();
-  return $results;
+  $confs = array();
+  $results = db_query($sql) -> fetchAll();
+  foreach($results as $result){
+    $confs[$result->nid] = $result->title;
+  }
+  return $confs;
 }
 
 function ajax_get_conference_callback($form, &$form_state){

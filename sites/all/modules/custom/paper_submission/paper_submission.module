@@ -251,6 +251,8 @@ function paper_submission_form_submit($form, &$form_state){
     variable_set('uid', $uid[0]);
   } elseif ($q->rowCount() == 0) {
     // create user here
+    $sql = 'SELECT role.rid FROM role WHERE role.name = \'participant\'';
+    $rid = db_query($sql) -> fetchCol()[0];
     $new_user = array(
       'name' => $mail,
       'pass' => '12345678', //user_password(8),
@@ -259,7 +261,7 @@ function paper_submission_form_submit($form, &$form_state){
       'init' => $mail,
       'roles' => array(
         DRUPAL_AUTHENTICATED_RID => 'authenticated user',
-        21 => 'participant',
+        $rid => 'participant',
       ),
     );
     $user = user_save('', $new_user);

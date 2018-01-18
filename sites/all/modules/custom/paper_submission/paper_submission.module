@@ -37,6 +37,19 @@ function paper_submission_menu() {
     'access arguments' => array('access paper list'),
   );
   
+  $items['participants_list'] = array(
+    'title' => 'Participants List',
+    'page callback' => array('paper_submission_participants_list'),
+    'access arguments' => array('access participants list'),
+  );
+  
+  $items['participants_list/feedback_form/%'] = array(
+    'title' => 'Acceptance Letter',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('paper_submission_notification_acceptance', 2),
+    'access arguments' => array('access participants list'),
+  );
+  
   return $items;
 }
 
@@ -47,6 +60,9 @@ function paper_submission_permission() {
     ),
     'access paper list' => array(
       'title' => t('Access list of participants paper'),
+    ),
+    'access participants list' => array(
+      'title' => t('Access participants list'),
     ),
   );
 }
@@ -271,6 +287,88 @@ function paper_submission_node_presave($node){
 
 function paper_submission_node_insert($node){
   // send notify email to participant about received paper
+function paper_submission_participants_list(){
+  $p_sql = 'SELECT n.`nid`, n.`title`, c.`field_select_conference_target_id` as `conf`
+    FROM `node` n
+    JOIN `field_data_field_select_conference` c
+    ON c.`entity_id` = n.`nid` 
+    AND n.`type` = \'paper_submission\'';
+  
+  $results = db_query($p_sql) -> fetchAll();
+  
+  $header = array(
+    'participant' => 'Participant',
+    'paper' => 'Paper Title',
+    'conf' => 'Applied Conference',
+    'noti_date' => 'Notification of Acceptance',
+    'operation' => 'Operation'
+  );
+  
+  $rows = array();
+  
+  foreach ($results as $result){
+    $conf_data = node_load($result->conf);
+    $conf_date = $conf_data->field_important_date['und'][0]['value'];
+    $date_coll = field_collection_item_load($conf_date);
+    $noti_date = date_format(date_create($date_coll->field_notification_of_acceptance['und'][0]['value']), 'F d, Y');
+
+    $paper_data = node_load($result->nid);
+    $participant = $paper_data->field_author_name['und'][0]['value'];
+    
+    $oper = l('notify participant', 'participants_list/feedback_form/' . $result->nid);
+
+    $rows[] = array(
+      'participant' => $participant,
+      'paper' => $result->title,
+      'conf' => $conf_data->title,
+      'noti_date' => $noti_date,
+      'operation' => $oper,
+    );
+  }
+  
+  $out = theme('table', array('header' => $header, 'rows' => $rows, 'empty' => 'No paper applied'));
+  
+  return $out;
+}
+
+function paper_submission_notification_acceptance($form, &$form_state, $nid){
+  $form['participant_id'] = array(
+    '#type' => 'hidden',
+    '#value' => $nid,
+  );
+  
+  $form['feedback'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Acceptance Feedback'),
+    '#required' => TRUE,
+  );
+  
+  $form['send'] = array(
+    '#type' => 'submit',
+    '#value' => 'Send',
+  );
+  
+  return $form;
+}
+
+function paper_submission_notification_acceptance_submit($form, &$form_state){
+  $nid = $form_state['values']['participant_id'];
+  $node = node_load($nid);
+  
+  $sender_name = variable_get('sender_name');
+  $sender_mail = variable_get('sender_email');
+  $user_mail = $node->field_author_s_email['und'][0]['email'];
+  $to = array(
+    0 => $user_mail,
+  );
+  $cc = array();
+  $bcc = array();
+  $sub = 'Acceptance Letter';
+  
+  $msg = $form_state['values']['feedback'];
+//  send_email($sender_name, $sender_mail, $to, $cc, $bcc, $sub, $msg);  
+  drupal_set_message('Acceptance letter sent');
+  drupal_goto('participants_list');
 }
 
 function paper_submission_list(){

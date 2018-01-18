@@ -385,16 +385,26 @@ function paper_submission_list(){
   $header = array(
     'paper' => 'Paper Title',
     'conf' => 'Applied Conference',
+    'conf_dp' => 'Date and Venue',
   );
   
   $rows = array();
   
   foreach ($p_result as $paper){
-    $c_sql = 'SELECT n.`title` FROM `node` n WHERE n.nid = ' . $paper->conf;
-    $c_result = db_query($c_sql) -> fetchCol();
+    $node_data = node_load($paper->conf);
+    $conf_date = $node_data->field_important_date['und'][0]['value'];
+    $date_coll = field_collection_item_load($conf_date);
+    $conference_date = date_format(date_create($date_coll->field_conference_dates['und'][0]['value']), 'F d, Y');
+
+    $venue = $node_data->field_venue['und'][0];
+    $country = location_country_name($venue['country']);
+    $locality = $venue['locality'];
+    $conf_dp = $conference_date . ' - ' . $locality . ', ' . $country;
+
     $rows[] = array(
       'paper' => $paper->title,
-      'conf' => $c_result[0],
+      'conf' => $node_data->title,
+      'conf_dp' => $conf_dp,
     );
   }
   

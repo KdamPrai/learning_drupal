@@ -1,0 +1,20 @@
+<?php
+function paper_submission_install(){
+  $author_permissions = array(
+    'access paper list',
+  );
+
+  paper_submission_add_role('author');
+  paper_submission_add_permissions('author', $author_permissions);
+}
+
+function paper_submission_add_role($role){
+  $role = new stdClass();
+  $role->name = $role;
+  user_role_save($role);
+}
+
+function paper_submission_add_permissions($role_name, $permissions){
+  $role = user_role_load_by_name($role_name);
+  user_role_grant_permissions($role->rid, $permissions);
+}

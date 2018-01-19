@@ -4,3 +4,5 @@ core = 7.x
 
 ; NEW LINE
 configure = admin/config/content/paper_submission
+
+dependencies[] = send_email:send_email

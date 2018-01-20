@@ -8,9 +8,9 @@ function paper_submission_install(){
   paper_submission_add_permissions('author', $author_permissions);
 }
 
-function paper_submission_add_role($role){
+function paper_submission_add_role($role_name){
   $role = new stdClass();
-  $role->name = $role;
+  $role->name = $role_name;
   user_role_save($role);
 }
 

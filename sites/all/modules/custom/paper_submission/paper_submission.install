@@ -3,9 +3,11 @@ function paper_submission_install(){
   $author_permissions = array(
     'access paper list',
   );
-
-  paper_submission_add_role('author');
-  paper_submission_add_permissions('author', $author_permissions);
+  $role_name = 'author';
+  paper_submission_add_role($role_name);
+  paper_submission_add_permissions($role_name, $author_permissions);
+  $role = user_role_load_by_name($role_name);
+  variable_set('rid', $role->rid);
 }
 
 function paper_submission_add_role($role_name){

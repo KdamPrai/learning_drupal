@@ -7,7 +7,7 @@ function paper_submission_help($path, $arg) {
   switch ($path) {
     case "admin/help#paper_submission":
       $output = '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('Paper Submission is a helper module of paper submission form.') . '</p>';
+      $output .= '<p>' . t('Paper Submission is a helper module of paper submission form to conference.') . '</p>';
       return $output;
   }
 }
@@ -232,9 +232,7 @@ function paper_submission_node_presave($node){
       // send email about account
       $sender_name = variable_get('sender_name');
       $sender_mail = variable_get('sender_email');
-      $to = array(
-        0 => $new_user['mail'],
-      );
+      $to = array($new_user['mail']);
       $cc = array();
       $bcc = array();
       $sub = t('Account Created');
@@ -398,9 +396,7 @@ function paper_submission_notification_acceptance_submit($form, &$form_state){
   $sender_name = variable_get('sender_name');
   $sender_mail = variable_get('sender_email');
   $user_mail = $node->field_author_s_email['und'][0]['email'];
-  $to = array(
-    0 => $user_mail,
-  );
+  $to = array($user_mail);
   $cc = array();
   $bcc = array();
   $sub = t('Acceptance Letter');

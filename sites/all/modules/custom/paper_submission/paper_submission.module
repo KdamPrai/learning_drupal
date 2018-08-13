@@ -3,131 +3,138 @@
 /*
  * implement hook_help to describe about module
  */
+
 function paper_submission_help($path, $arg) {
-  switch ($path) {
-    case "admin/help#paper_submission":
-      $output = '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('Paper Submission is a helper module of paper submission form to conference.') . '</p>';
-      return $output;
-  }
+    switch ($path) {
+        case "admin/help#paper_submission":
+            $output = '<h3>' . t('About') . '</h3>';
+            $output .= '<p>' . t('Paper Submission is a helper module of paper submission form to conference.') . '</p>';
+            return $output;
+    }
 }
 
 /*
  * implement hook_menu to define links
  */
+
 function paper_submission_menu() {
-  $items = array();
-  
-  $items['admin/config/content/paper_submission_set_email'] = array(
-    'title' => t('Set Admin Email'),
-    'description' => t('Set email address to send to authors'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('paper_submission_set_email_form'),
-    'access arguments' => array('access paper_submission email setting'),
-    'type' => MENU_NORMAL_ITEM,
-  );
-  
-  $items['paper_submission_paper_list'] = array(
-    'title' => t('List of paper'),
-    'page callback' => array('paper_submission_list'),
-    'access arguments' => array('access paper_submission paper list'),
-  );
-  
-  $items['paper_submission_authors_list'] = array(
-    'title' => t('Authors List'),
-    'page callback' => array('paper_submission_authors_list'),
-    'access arguments' => array('access paper_submission authors list'),
-  );
-  
-  $items['paper_submission_authors_list/feedback_form/%'] = array(
-    'title' => t('Acceptance Letter'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('paper_submission_notification_acceptance_form', 2),
-    'access arguments' => array('access paper_submission authors list'),
-    'type' => MENU_CALLBACK,
-  );
-  
-  return $items;
+    $items = array();
+
+    $items['admin/config/content/paper_submission_set_email'] = array(
+        'title' => t('Set Admin Email'),
+        'description' => t('Set email address to send to authors'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('paper_submission_set_email_form'),
+        'access arguments' => array('access paper_submission email setting'),
+        'type' => MENU_NORMAL_ITEM,
+    );
+
+    $items['paper_submission_paper_list'] = array(
+        'title' => t('List of paper'),
+        'page callback' => array('paper_submission_list'),
+        'access arguments' => array('access paper_submission paper list'),
+    );
+
+    $items['paper_submission_authors_list'] = array(
+        'title' => t('Authors List'),
+        'page callback' => array('paper_submission_authors_list'),
+        'access arguments' => array('access paper_submission authors list'),
+    );
+
+    $items['paper_submission_authors_list/feedback_form/%'] = array(
+        'title' => t('Acceptance Letter'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('paper_submission_notification_acceptance_form', 2),
+        'access arguments' => array('access paper_submission authors list'),
+        'type' => MENU_CALLBACK,
+    );
+
+    return $items;
 }
 
 /*
  * hook_permission: define custom permission
  */
+
 function paper_submission_permission() {
-  return array(
-    'access paper_submission email setting' => array(
-      'title' => t('Access Email Setting for Paper Submission module'),
-    ),
-    'access paper_submission paper list' => array(
-      'title' => t('Access list of authors paper'),
-    ),
-    'access paper_submission authors list' => array(
-      'title' => t('Access authors list'),
-    ),
-  );
+    return array(
+        'access paper_submission email setting' => array(
+            'title' => t('Access Email Setting for Paper Submission module'),
+        ),
+        'access paper_submission paper list' => array(
+            'title' => t('Access list of authors paper'),
+        ),
+        'access paper_submission authors list' => array(
+            'title' => t('Access authors list'),
+        ),
+    );
 }
 
 /*
  * form to set sender name and email (e.g. admin, admin@conference.domain)
  */
-function paper_submission_set_email_form($form, &$form_state){
-  $form['sender_name'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Set Sender Name'),
-    '#default_value' => variable_get('sender_name'),
-    '#required' => TRUE,
-  );
-  
-  $form['sender_email'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Set Sender Email'),
-    '#default_value' => variable_get('sender_email'),
-    '#required' => TRUE,
-  );
-  
-  return system_settings_form($form);
+
+function paper_submission_set_email_form($form, &$form_state) {
+    $form['sender_name'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Set Sender Name'),
+        '#default_value' => variable_get('sender_name'),
+        '#required' => TRUE,
+    );
+
+    $form['sender_email'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Set Sender Email'),
+        '#default_value' => variable_get('sender_email'),
+        '#required' => TRUE,
+    );
+
+    return system_settings_form($form);
 }
 
 /*
  * verify email format of set_email_form
  */
-function paper_submission_set_paper_email_form_validate($form, &$form_state){
-  if (!valid_email_address($form_state['values']['sender_email'])) {
-    form_set_error('sender_email', t('You must enter a valid e-mail address.'));
-  }
+
+function paper_submission_set_paper_email_form_validate($form, &$form_state) {
+    if (!valid_email_address($form_state['values']['sender_email'])) {
+        form_set_error('sender_email', t('You must enter a valid e-mail address.'));
+    }
 }
 
 /*
  * form_alter: modified Paper Submission Content Type creation form
  */
-function paper_submission_form_alter(&$form, &$form_state, $form_id){
-  if ($form_id == 'paper_submission_node_form') {
-    drupal_set_title('Paper Submission');
-    $selected = isset($form_state['values']['field_conference_place_date']['und']) ? $form_state['values']['field_conference_place_date']['und'] : key(paper_submission_get_conference_options());
-    $form['field_conference_place_date']['und']['#options'] = paper_submission_get_conference_options();
-    $form['field_conference_place_date']['und']['#ajax'] = array(
-      'callback' => 'paper_submission_get_conference_callback',
-      'wrapper' => 'conference-div',
-      'method' => 'replace',
-    );
-    $opt = paper_submission_get_conference_name_options($selected);
-    if (empty($opt)){
-      $opt = $form['field_select_conference']['und']['#options'];
+
+function paper_submission_form_alter(&$form, &$form_state, $form_id) {
+    if ($form_id == 'paper_submission_node_form') {
+        drupal_set_title('Paper Submission');
+        $selected = isset($form_state['values']['field_conference_place_date']['und']) ? $form_state['values']['field_conference_place_date']['und'] : key(paper_submission_get_conference_options());
+        $form['field_conference_place_date']['und']['#options'] = paper_submission_get_conference_options();
+        $form['field_conference_place_date']['und']['#ajax'] = array(
+            'callback' => 'paper_submission_get_conference_callback',
+            'wrapper' => 'conference-div',
+            'method' => 'replace',
+        );
+        $opt = paper_submission_get_conference_name_options($selected);
+        if (empty($opt)) {
+            $opt = $form['field_select_conference']['und']['#options'];
+        }
+        $form['field_select_conference']['und']['#prefix'] = '<div id="conference-div">';
+        $form['field_select_conference']['und']['#suffix'] = '</div>';
+        $form['field_select_conference']['und']['#options'] = $opt;
+
+        $form['field_position_title']['und']['#options']['_none'] = t('- Title -');
+        $form['field_country']['und']['#options']['_none'] = t('- Country -');
     }
-    $form['field_select_conference']['und']['#prefix'] = '<div id="conference-div">';
-    $form['field_select_conference']['und']['#suffix'] = '</div>';
-    $form['field_select_conference']['und']['#options'] = $opt;
-    
-    $form['field_position_title']['und']['#options']['_none'] = t('- Title -');
-    $form['field_country']['und']['#options']['_none'] = t('- Country -');
-  }
 }
 
 /*
  * function to provide options to conference_place_date select option
  */
-function paper_submission_get_conference_options(){
-  $sql = 'SELECT cd.field_conference_dates_value as conf_date, 
+
+function paper_submission_get_conference_options() {
+    $sql = 'SELECT cd.field_conference_dates_value as conf_date, 
       v.field_venue_country, v.field_venue_locality, 
       d.entity_id AS conf_id
       FROM {field_data_field_conference_dates} cd
@@ -135,45 +142,47 @@ function paper_submission_get_conference_options(){
       JOIN {field_data_field_venue} v
       ON d.entity_id = v.entity_id
       AND d.field_important_date_value = cd.entity_id';
-  $results = db_query($sql) -> fetchAll();
-  $date_venue = array('_none' => t('- Select -'));
-  foreach($results as $result){
-    $date = date_format(date_create($result->conf_date), 'F d, Y');
-    $venue = $result->field_venue_locality . ', ' . country_get_list()[$result->field_venue_country];
-    $date_venue[$result->conf_id] = $date . ' - ' . $venue;
-    if (!in_array($date_venue, $con_pd)) {
-      $con_pd[$result->conf_id] = $date_venue;
+    $results = db_query($sql)->fetchAll();
+    $date_venue = array('_none' => t('- Select -'));
+    foreach ($results as $result) {
+        $date = date_format(date_create($result->conf_date), 'F d, Y');
+        $venue = $result->field_venue_locality . ', ' . country_get_list()[$result->field_venue_country];
+        $date_venue[$result->conf_id] = $date . ' - ' . $venue;
+        if (!in_array($date_venue, $con_pd)) {
+            $con_pd[$result->conf_id] = $date_venue;
+        }
     }
-  }
-  return !empty($results) ? $con_pd : array();
+    return !empty($results) ? $con_pd : array();
 }
 
 /*
  * function to provide options to select_conference select option
  */
-function paper_submission_get_conference_name_options($selected_pd){
-  $conf_name = array();
-  if ($selected_pd != '_none' && $selected_pd[0]['target_id'] != ''){
-    $select_opt = $selected_pd[0]['target_id'];
-    $node = node_load($select_opt);
-    $important_date = $node->field_important_date;
-    $dates_collection = field_collection_item_load($important_date['und'][0]['value']);
-    $conference_date = $dates_collection->field_conference_dates['und'][0]['value'];
-    
-    $venue = $node->field_venue['und'][0];
-    $country = $venue['country'];
-    $locality = $venue['locality'];
-    
-    $conf_name = paper_submission_get_conference_title_by_date_and_place($conference_date, $country, $locality);
-  }
-  return $conf_name;
+
+function paper_submission_get_conference_name_options($selected_pd) {
+    $conf_name = array();
+    if ($selected_pd != '_none' && $selected_pd[0]['target_id'] != '') {
+        $select_opt = $selected_pd[0]['target_id'];
+        $node = node_load($select_opt);
+        $important_date = $node->field_important_date;
+        $dates_collection = field_collection_item_load($important_date['und'][0]['value']);
+        $conference_date = $dates_collection->field_conference_dates['und'][0]['value'];
+
+        $venue = $node->field_venue['und'][0];
+        $country = $venue['country'];
+        $locality = $venue['locality'];
+
+        $conf_name = paper_submission_get_conference_title_by_date_and_place($conference_date, $country, $locality);
+    }
+    return $conf_name;
 }
 
 /*
  * helper function to query all conferences on input date and place
  */
-function paper_submission_get_conference_title_by_date_and_place($date, $country, $locality){
- $sql = 'SELECT n.nid, n.title
+
+function paper_submission_get_conference_title_by_date_and_place($date, $country, $locality) {
+    $sql = 'SELECT n.nid, n.title
     FROM node n
     JOIN {field_data_field_venue} v
     JOIN {field_data_field_important_date} idate
@@ -184,15 +193,16 @@ function paper_submission_get_conference_title_by_date_and_place($date, $country
     AND cdate.entity_id = idate.field_important_date_value
     AND idate.entity_id = v.entity_id
     AND n.nid = idate.entity_id';
-  $confs = db_query($sql, array(':country' => $country, ':locality' => $locality, ':date' => $date)) -> fetchAll();
-  return $confs;
+    $confs = db_query($sql, array(':country' => $country, ':locality' => $locality, ':date' => $date))->fetchAll();
+    return $confs;
 }
 
 /*
  * function callback for ajax of conference_place_date select option
  */
-function paper_submission_get_conference_callback($form, &$form_state){
-  return array(
+
+function paper_submission_get_conference_callback($form, &$form_state) {
+    return array(
         '#type' => 'ajax',
         '#commands' => array(
             ajax_command_replace("#conference-div", render($form['field_select_conference']['und'])),
@@ -203,44 +213,46 @@ function paper_submission_get_conference_callback($form, &$form_state){
 /*
  * hook_node_presave: modified some node data before it's stored to db
  */
-function paper_submission_node_presave($node){
-  if($node->type == 'paper_submission' && $node->is_new){
-    // careful on this email, not sure attrib format
-    $mail = $node->field_author_s_email['und'][0]['email'];
-    $q = db_query("SELECT users.uid FROM users WHERE users.mail = :mail", array(':mail' => $mail));
 
-    // if submitted email is exist, process paper submission
-    // if email not exist, create an account for that email
-    if ($q->rowCount() > 0){
-      $uid = $q -> fetchCol()[0];
-    } elseif ($q->rowCount() == 0) {
-      // create user here
-      $rid = variable_get('paper_submission_rid');
-      $new_user = array(
-        'name' => $mail,
-        'pass' => user_password(8),
-        'mail' => $mail,
-        'status' => 1,
-        'init' => $mail,
-        'roles' => array(
-          DRUPAL_AUTHENTICATED_RID => 'authenticated user',
-          $rid => 'author',
-        ),
-      );
-      $user = user_save('', $new_user);
-      $uid = $user->uid;
-      // send email about account
-      $sender_name = variable_get('sender_name');
-      $sender_mail = variable_get('sender_email');
-      $to = array($new_user['mail']);
-      $cc = array();
-      $bcc = array();
-      $sub = t('Account Created');
+function paper_submission_node_presave($node) {
+    if ($node->type == 'paper_submission' && $node->is_new) {
+        // careful on this email, not sure attrib format
+        $mail = $node->field_author_s_email['und'][0]['email'];
+        $q = db_query("SELECT users.uid FROM users WHERE users.mail = :mail", array(':mail' => $mail));
 
-      $title = $node->field_position_title['und'][0]['value'];
-      $name = $node->field_author_name['und'][0]['value'];
+        // if submitted email is exist, process paper submission
+        // if email not exist, create an account for that email
+        if ($q->rowCount() > 0) {
+            $uid = $q->fetchCol()[0];
+        }
+        elseif ($q->rowCount() == 0) {
+            // create user here
+            $rid = variable_get('paper_submission_rid');
+            $new_user = array(
+                'name' => $mail,
+                'pass' => user_password(8),
+                'mail' => $mail,
+                'status' => 1,
+                'init' => $mail,
+                'roles' => array(
+                    DRUPAL_AUTHENTICATED_RID => 'authenticated user',
+                    $rid => 'author',
+                ),
+            );
+            $user = user_save('', $new_user);
+            $uid = $user->uid;
+            // send email about account
+            $sender_name = variable_get('sender_name');
+            $sender_mail = variable_get('sender_email');
+            $to = array($new_user['mail']);
+            $cc = array();
+            $bcc = array();
+            $sub = t('Account Created');
 
-      $msg = 'Dear <strong>' . $title . ' ' . $name . '</strong>,<br>
+            $title = $node->field_position_title['und'][0]['value'];
+            $name = $node->field_author_name['und'][0]['value'];
+
+            $msg = 'Dear <strong>' . $title . ' ' . $name . '</strong>,<br>
         We just created an account for you.<br>
         With this account you can check all conferences that you applied your paper to.<br>
         You can login to your account with the following information:<br><br>
@@ -252,218 +264,225 @@ function paper_submission_node_presave($node){
         <strong>Conference Admin</strong><br><br>
 
         <strong>Note:</strong> You can change your password to another string which may not be guess easily but rememberable to you.';
-      send_email($sender_name, $sender_mail, $to, $cc, $bcc, $sub, $msg);
-      drupal_get_messages('status');
-      drupal_set_message(t('Account Created'));
+            send_email($sender_name, $sender_mail, $to, $cc, $bcc, $sub, $msg);
+            drupal_get_messages('status');
+            drupal_set_message(t('Account Created'));
+        }
+        $node->uid = $uid;
     }
-    $node->uid = $uid;
-  }
 }
 
 /*
  * hook_node_insert: process send email on paper submitted
  */
-function paper_submission_node_insert($node){
-  // send notify email to author about received paper
-  if ($node->type == 'paper_submission'){
+
+function paper_submission_node_insert($node) {
+    // send notify email to author about received paper
+    if ($node->type == 'paper_submission') {
+        $sender_name = variable_get('sender_name');
+        $sender_mail = variable_get('sender_email');
+        $user_mail = $node->field_author_s_email['und'][0]['email'];
+        $to = array($user_mail);
+        $cc = array();
+        $bcc = array();
+        $sub = t('Paper Submitted');
+
+        $title = $node->field_position_title['und'][0]['value'];
+        $name = $node->field_author_name['und'][0]['value'];
+        $paper = $node->title;
+        $conf_id = $node->field_select_conference['und'][0]['target_id'];
+        $node_data = node_load($conf_id);
+        $conference = $node_data->title;
+
+        $conf_date = $node_data->field_important_date['und'][0]['value'];
+        $date_coll = field_collection_item_load($conf_date);
+        $abstract_deadline = date_format(date_create($date_coll->field_abstracts_deadline['und'][0]['value']), 'F d, Y');
+        $notification_of_acceptance = date_format(date_create($date_coll->field_notification_of_acceptance['und'][0]['value']), 'F d, Y');
+        $registration_deadline = date_format(date_create($date_coll->field_registration_deadline['und'][0]['value']), 'F d, Y');
+        $full_text_paper_submission = date_format(date_create($date_coll->field_full_text_paper_submission['und'][0]['value']), 'F d, Y');
+        $conference_date = date_format(date_create($date_coll->field_conference_dates['und'][0]['value']), 'F d, Y');
+
+        $list_of_important_dates = '<strong>Abstract Deadline:</strong> ' . $abstract_deadline
+            . '<br>
+      <strong>Notification of Acceptance:</strong> ' . $notification_of_acceptance
+            . '<br>
+      <strong>Registration Deadline:</strong> ' . $registration_deadline
+            . '<br>
+      <strong>Full Text Paper Submission:</strong> ' . $full_text_paper_submission
+            . '<br>
+      <strong>Conference dates:</strong> ' . $conference_date;
+
+        $msg = 'Dear <strong>' . $title . ' ' . $name . '</strong>, <br>
+      Your paper \'<strong>' . $paper . '</strong>\' has been submitted to conference \'<strong>' . $conference . '</strong>\'.
+      Here are some important dates you should note:<br>
+      '
+            . $list_of_important_dates .
+            '<br>
+      <br>
+      Best regards,<br>
+      Conference Admin';
+//    send_email($sender_name, $sender_mail, $to, $cc, $bcc, $sub, $msg);
+        drupal_get_messages('status');
+        drupal_set_message(t('Paper Submitted.'));
+    }
+}
+
+/*
+ * menu link to list all authors submitted their paper to conferences
+ */
+
+function paper_submission_authors_list() {
+    $db_select = db_select('node', 'n');
+    $db_select->addField('c', 'field_select_conference_target_id', 'conf');
+    $db_select->join('field_data_field_select_conference', 'c', 'c.entity_id = n.nid AND n.type = \'paper_submission\'');
+    $db_select->fields('n', array('nid', 'title'));
+    $db_select->fields('c', array('field_select_conference_target_id'));
+    $db_select = $db_select->extend('PagerDefault')->limit(5);
+
+    $results = $db_select->execute()->fetchAll();
+
+    $header = array(
+        'author' => t('Author'),
+        'paper' => t('Paper Title'),
+        'conf' => t('Applied Conference'),
+        'noti_date' => t('Notification of Acceptance Date'),
+        'operation' => t('Operation')
+    );
+
+    $rows = array();
+
+    foreach ($results as $result) {
+        $conf_data = node_load($result->conf);
+        $conf_date = $conf_data->field_important_date['und'][0]['value'];
+        $date_coll = field_collection_item_load($conf_date);
+        $noti_date = date_format(date_create($date_coll->field_notification_of_acceptance['und'][0]['value']), 'F d, Y');
+
+        $paper_data = node_load($result->nid);
+        $author = $paper_data->field_author_name['und'][0]['value'];
+
+        $oper = l('notify author', 'authors_list/feedback_form/' . $result->nid);
+
+        $rows[] = array(
+            'author' => $author,
+            'paper' => $result->title,
+            'conf' => $conf_data->title,
+            'noti_date' => $noti_date,
+            'operation' => $oper,
+        );
+    }
+
+    $out = theme('table', array('header' => $header, 'rows' => $rows, 'empty' => 'No paper applied'));
+    $out .= theme('pager');
+    return $out;
+}
+
+/*
+ * form to notify/reply to submitted authors
+ */
+
+function paper_submission_notification_acceptance($form, &$form_state, $nid) {
+    $form['author_id'] = array(
+        '#type' => 'hidden',
+        '#value' => $nid,
+    );
+
+    $form['feedback'] = array(
+        '#type' => 'text_format',
+        '#title' => t('Acceptance Feedback'),
+        '#format' => 'full_html',
+        '#required' => TRUE,
+    );
+
+    $form['send'] = array(
+        '#type' => 'submit',
+        '#value' => t('Send'),
+    );
+
+    return $form;
+}
+
+/*
+ * process send email to notify selected author
+ */
+
+function paper_submission_notification_acceptance_submit($form, &$form_state) {
+    $nid = $form_state['values']['author_id'];
+    $node = node_load($nid);
+
     $sender_name = variable_get('sender_name');
     $sender_mail = variable_get('sender_email');
     $user_mail = $node->field_author_s_email['und'][0]['email'];
     $to = array($user_mail);
     $cc = array();
     $bcc = array();
-    $sub = t('Paper Submitted');
+    $sub = t('Acceptance Letter');
 
-    $title = $node->field_position_title['und'][0]['value'];
-    $name = $node->field_author_name['und'][0]['value'];
-    $paper = $node->title;
-    $conf_id = $node->field_select_conference['und'][0]['target_id'];
-    $node_data = node_load($conf_id);
-    $conference = $node_data->title;
-    
-    $conf_date = $node_data->field_important_date['und'][0]['value'];
-    $date_coll = field_collection_item_load($conf_date);
-    $abstract_deadline = date_format(date_create($date_coll->field_abstracts_deadline['und'][0]['value']), 'F d, Y');
-    $notification_of_acceptance = date_format(date_create($date_coll->field_notification_of_acceptance['und'][0]['value']), 'F d, Y');
-    $registration_deadline = date_format(date_create($date_coll->field_registration_deadline['und'][0]['value']), 'F d, Y');
-    $full_text_paper_submission = date_format(date_create($date_coll->field_full_text_paper_submission['und'][0]['value']), 'F d, Y');
-    $conference_date = date_format(date_create($date_coll->field_conference_dates['und'][0]['value']), 'F d, Y');
-
-    $list_of_important_dates = '<strong>Abstract Deadline:</strong> ' . $abstract_deadline
-        . '<br>
-      <strong>Notification of Acceptance:</strong> ' . $notification_of_acceptance
-        . '<br>
-      <strong>Registration Deadline:</strong> ' . $registration_deadline
-        . '<br>
-      <strong>Full Text Paper Submission:</strong> ' . $full_text_paper_submission
-        . '<br>
-      <strong>Conference dates:</strong> ' . $conference_date;
-    
-    $msg = 'Dear <strong>' . $title . ' ' . $name . '</strong>, <br>
-      Your paper \'<strong>' . $paper . '</strong>\' has been submitted to conference \'<strong>' . $conference . '</strong>\'.
-      Here are some important dates you should note:<br>
-      '
-      . $list_of_important_dates .
-      '<br>
-      <br>
-      Best regards,<br>
-      Conference Admin';
-//    send_email($sender_name, $sender_mail, $to, $cc, $bcc, $sub, $msg);
-    drupal_get_messages('status');
-    drupal_set_message(t('Paper Submitted.'));
-  }
-}
-
-/*
- * menu link to list all authors submitted their paper to conferences
- */
-function paper_submission_authors_list(){
-  $db_select = db_select('node', 'n');
-  $db_select -> addField('c', 'field_select_conference_target_id', 'conf');
-  $db_select -> join ('field_data_field_select_conference', 'c', 'c.entity_id = n.nid AND n.type = \'paper_submission\'');
-  $db_select -> fields ('n', array('nid', 'title'));
-  $db_select -> fields ('c', array('field_select_conference_target_id'));
-  $db_select = $db_select -> extend('PagerDefault') -> limit(5);
-  
-  $results = $db_select ->execute() -> fetchAll();
-  
-  $header = array(
-    'author' => t('Author'),
-    'paper' => t('Paper Title'),
-    'conf' => t('Applied Conference'),
-    'noti_date' => t('Notification of Acceptance Date'),
-    'operation' => t('Operation')
-  );
-  
-  $rows = array();
-  
-  foreach ($results as $result){
-    $conf_data = node_load($result->conf);
-    $conf_date = $conf_data->field_important_date['und'][0]['value'];
-    $date_coll = field_collection_item_load($conf_date);
-    $noti_date = date_format(date_create($date_coll->field_notification_of_acceptance['und'][0]['value']), 'F d, Y');
-
-    $paper_data = node_load($result->nid);
-    $author = $paper_data->field_author_name['und'][0]['value'];
-    
-    $oper = l('notify author', 'authors_list/feedback_form/' . $result->nid);
-
-    $rows[] = array(
-      'author' => $author,
-      'paper' => $result->title,
-      'conf' => $conf_data->title,
-      'noti_date' => $noti_date,
-      'operation' => $oper,
-    );
-  }
-  
-  $out = theme('table', array('header' => $header, 'rows' => $rows, 'empty' => 'No paper applied'));
-  $out .= theme('pager');
-  return $out;
-}
-
-/*
- * form to notify/reply to submitted authors
- */
-function paper_submission_notification_acceptance($form, &$form_state, $nid){
-  $form['author_id'] = array(
-    '#type' => 'hidden',
-    '#value' => $nid,
-  );
-  
-  $form['feedback'] = array(
-    '#type' => 'text_format',
-    '#title' => t('Acceptance Feedback'),
-    '#format' => 'full_html',
-    '#required' => TRUE,
-  );
-  
-  $form['send'] = array(
-    '#type' => 'submit',
-    '#value' => t('Send'),
-  );
-  
-  return $form;
-}
-
-/*
- * process send email to notify selected author
- */
-function paper_submission_notification_acceptance_submit($form, &$form_state){
-  $nid = $form_state['values']['author_id'];
-  $node = node_load($nid);
-  
-  $sender_name = variable_get('sender_name');
-  $sender_mail = variable_get('sender_email');
-  $user_mail = $node->field_author_s_email['und'][0]['email'];
-  $to = array($user_mail);
-  $cc = array();
-  $bcc = array();
-  $sub = t('Acceptance Letter');
-  
-  $msg = $form_state['values']['feedback'];
+    $msg = $form_state['values']['feedback'];
 //  send_email($sender_name, $sender_mail, $to, $cc, $bcc, $sub, $msg);  
-  drupal_get_messages('status');
-  drupal_set_message(t('Acceptance letter sent.'));
-  drupal_goto('authors_list');
+    drupal_get_messages('status');
+    drupal_set_message(t('Acceptance letter sent.'));
+    drupal_goto('authors_list');
 }
 
 /*
  * menu link to list all paper of logged in author
  */
-function paper_submission_list(){
-  global $user;
-  $uid = $user->uid;
-  
-  $db_select = db_select('node', 'n');
-  $db_select -> addField('c', 'field_select_conference_target_id', 'conf');
-  $db_select -> join('field_data_field_select_conference', 'c', 'c.entity_id = n.nid');
-  $db_select -> fields('n', array('title'))
-      -> fields('c', array('field_select_conference_target_id'));
-  $db_select -> condition('n.uid', $uid, '=');
-  $db_select = $db_select -> extend('PagerDefault') -> limit(5);
-  
-  $p_result = $db_select -> execute() -> fetchAll();
-  
-  $header = array(
-    'paper' => t('Paper Title'),
-    'conf' => t('Applied Conference'),
-    'conf_dp' => t('Date and Venue'),
-  );
-  
-  $rows = array();
-  
-  foreach ($p_result as $paper){
-    $node_data = node_load($paper->conf);
-    $conf_date = $node_data->field_important_date['und'][0]['value'];
-    $date_coll = field_collection_item_load($conf_date);
-    $conference_date = date_format(date_create($date_coll->field_conference_dates['und'][0]['value']), 'F d, Y');
 
-    $venue = $node_data->field_venue['und'][0];
-    $country = country_get_list()[$venue['country']];
-    $locality = $venue['locality'];
-    $conf_dp = $conference_date . ' - ' . $locality . ', ' . $country;
+function paper_submission_list() {
+    global $user;
+    $uid = $user->uid;
 
-    $rows[] = array(
-      'paper' => $paper->title,
-      'conf' => $node_data->title,
-      'conf_dp' => $conf_dp,
+    $db_select = db_select('node', 'n');
+    $db_select->addField('c', 'field_select_conference_target_id', 'conf');
+    $db_select->join('field_data_field_select_conference', 'c', 'c.entity_id = n.nid');
+    $db_select->fields('n', array('title'))
+        ->fields('c', array('field_select_conference_target_id'));
+    $db_select->condition('n.uid', $uid, '=');
+    $db_select = $db_select->extend('PagerDefault')->limit(5);
+
+    $p_result = $db_select->execute()->fetchAll();
+
+    $header = array(
+        'paper' => t('Paper Title'),
+        'conf' => t('Applied Conference'),
+        'conf_dp' => t('Date and Venue'),
     );
-  }
-  
-  $out = theme('table', array('header' => $header, 'rows' => $rows, 'empty' => t('No paper applied')));
-  $out .= theme('pager');
-  return $out;
+
+    $rows = array();
+
+    foreach ($p_result as $paper) {
+        $node_data = node_load($paper->conf);
+        $conf_date = $node_data->field_important_date['und'][0]['value'];
+        $date_coll = field_collection_item_load($conf_date);
+        $conference_date = date_format(date_create($date_coll->field_conference_dates['und'][0]['value']), 'F d, Y');
+
+        $venue = $node_data->field_venue['und'][0];
+        $country = country_get_list()[$venue['country']];
+        $locality = $venue['locality'];
+        $conf_dp = $conference_date . ' - ' . $locality . ', ' . $country;
+
+        $rows[] = array(
+            'paper' => $paper->title,
+            'conf' => $node_data->title,
+            'conf_dp' => $conf_dp,
+        );
+    }
+
+    $out = theme('table', array('header' => $header, 'rows' => $rows, 'empty' => t('No paper applied')));
+    $out .= theme('pager');
+    return $out;
 }
 
 /*
  * helper function to get country names, all countries if no parameter applied
  */
-function paper_submission_get_country_name($country_code = ''){
-  include_once DRUPAL_ROOT . '/includes/locale.inc'; 
-  if ($country_code == ''){
-    return country_get_list();
-  } else {
-    return country_get_list()[$country_code];
-  }
+
+function paper_submission_get_country_name($country_code = '') {
+    include_once DRUPAL_ROOT . '/includes/locale.inc';
+    if ($country_code == '') {
+        return country_get_list();
+    }
+    else {
+        return country_get_list()[$country_code];
+    }
 }

@@ -239,7 +239,7 @@ function zregistration_generate_pdf($uid){
                     <tr>
                         <td class="label">Elementary School</td>
                         <td class="colon">:</td>
-                        <td class="value">' . $eschool . '</td>
+                        <td class="value" lang="km">' . $eschool . '</td>
                     </tr>
                     <tr>
                         <td class="label">High School</td>
@@ -294,7 +294,8 @@ function zregistration_generate_pdf($uid){
             </html>';
     
         // from here generate the pdf
-        $mpdf = new mPDF('c', 'A4');
+        $mpdf = new mPDF('s', 'A4');
+        $mpdf->autoLangToFont = true;
         $mpdf->writeHTML($html);
         $mpdf->Output('student_info.pdf', 'I');
     } else {
